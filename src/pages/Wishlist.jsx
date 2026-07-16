@@ -5,7 +5,7 @@ import LinkButton from '../components/LinkButton.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
 import { googleMapUrl, placeMapUrl, searchMapUrl } from '../utils/maps.js';
-import { getGooglePlaceDetails, googlePlacesConfigured, supportsGoogleDetails } from '../utils/googlePlaces.js';
+import { getGooglePlaceDetails, googlePlacesConfigured, hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
 
 const emptyForm = {
   nameKo: '',
@@ -158,7 +158,10 @@ export default function Wishlist({ wishlist, setWishlist }) {
 
   function openGoogleDialog(item) {
     setGoogleDialogPlace(item);
-    if (!googleDetails[item.id] && googleStatus[item.id] !== 'loading') loadGoogleDetails(item);
+    const details = googleDetails[item.id];
+    if ((!details || !hasCurrentGooglePhotoUrls(details)) && googleStatus[item.id] !== 'loading') {
+      loadGoogleDetails(item);
+    }
   }
 
   return (

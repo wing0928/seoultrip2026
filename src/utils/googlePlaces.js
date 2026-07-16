@@ -21,7 +21,7 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
 
   const query = `${placeSearchQuery(place)} 대한민국`.trim();
   const cached = readCache()[query];
-  if (!refresh && cached && Date.now() - cached.savedAt < CACHE_TTL && hasCurrentPhotoUrls(cached.data)) {
+  if (!refresh && cached && Date.now() - cached.savedAt < CACHE_TTL && hasCurrentGooglePhotoUrls(cached.data)) {
     return cached.data;
   }
 
@@ -66,7 +66,7 @@ function writeCache(query, data) {
   }
 }
 
-function hasCurrentPhotoUrls(data) {
+export function hasCurrentGooglePhotoUrls(data) {
   return !(data?.photos || []).some((photo) => {
     const url = String(photo?.url || '');
     return url && !url.includes('/functions/v1/google-place-details?photo=');
