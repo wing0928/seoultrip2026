@@ -60,7 +60,10 @@ Deno.serve(async (request) => {
     const place = googlePayload?.places?.[0];
     if (!place) return json({ code: 'not_found', error: 'Google 找不到相符店家' }, 404, cors);
 
-    const endpoint = new URL(request.url);
+    const supabaseUrl = (Deno.env.get('SUPABASE_URL') || '').replace(/\/$/, '');
+    const endpoint = supabaseUrl
+      ? new URL(`${supabaseUrl}/functions/v1/google-place-details`)
+      : new URL(request.url);
     endpoint.search = '';
     const photos = (place.photos || []).slice(0, 2).map((photo: Record<string, unknown>) => {
       const photoUrl = new URL(endpoint);
