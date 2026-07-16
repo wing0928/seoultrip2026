@@ -1,0 +1,5 @@
+[functions.google-place-details]
+verify_jwt = false
+
+[functions.trip-sync]
+verify_jwt = false
