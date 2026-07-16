@@ -1,6 +1,10 @@
 import { placeSearchQuery } from './maps.js';
 
-const FUNCTION_URL = String(import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL || '').trim();
+const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
+const FUNCTION_URL = String(
+  import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL ||
+  (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
+).trim();
 const CACHE_KEY = 'seoul-trip-2026:google-places-cache';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
