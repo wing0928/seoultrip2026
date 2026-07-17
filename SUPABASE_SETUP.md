@@ -18,7 +18,7 @@
 3. 設定允許連線的網站來源。正式網址與本機網址以逗號分隔：
 
    ```powershell
-   npx supabase secrets set ALLOWED_ORIGIN=http://127.0.0.1:5173,http://localhost:5173,https://YOUR_GITHUB_PAGES_DOMAIN
+   npx supabase secrets set ALLOWED_ORIGIN=http://127.0.0.1:5173,http://localhost:5173,https://wing0928.github.io
    ```
 
 4. 部署家庭同步 Edge Function：
