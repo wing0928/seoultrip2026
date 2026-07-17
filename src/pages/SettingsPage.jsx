@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { Cloud, Copy, Link2, RefreshCw, Unplug } from 'lucide-react';
+import { Cloud, Copy, Link2, RefreshCw, Share2, Unplug } from 'lucide-react';
 import InfoCard from '../components/InfoCard.jsx';
-import { formatSyncCode } from '../hooks/useTripSync.js';
+import { createSyncInviteUrl, formatSyncCode } from '../hooks/useTripSync.js';
 
 const fields = [
   ['tripName', '旅行名稱'],
@@ -27,6 +27,7 @@ const statusLabels = {
 export default function SettingsPage({ trip, setTrip, sync }) {
   const [joinCode, setJoinCode] = useState('');
   const [copied, setCopied] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState('');
   const busy = ['connecting', 'saving'].includes(sync.status);
 
   async function handleCreate() {
@@ -54,6 +55,28 @@ export default function SettingsPage({ trip, setTrip, sync }) {
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
       setCopied(false);
+    }
+  }
+
+  async function handleShareInvite() {
+    const url = createSyncInviteUrl(sync.syncCode);
+    if (!url) return;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Seoul Trip 2026 家庭同步',
+          text: '開啟連結，加入同一份首爾旅遊清單。',
+          url
+        });
+        setInviteStatus('已開啟分享選單');
+      } else {
+        await navigator.clipboard.writeText(url);
+        setInviteStatus('已複製手機同步連結');
+      }
+      window.setTimeout(() => setInviteStatus(''), 2200);
+    } catch (shareError) {
+      if (shareError?.name !== 'AbortError') setInviteStatus('無法分享，請改用上方同步碼');
     }
   }
 
@@ -117,6 +140,11 @@ export default function SettingsPage({ trip, setTrip, sync }) {
               </div>
             </label>
             {copied && <p className="sync-confirmation">已複製同步碼</p>}
+            <button type="button" className="wide-button sync-share-button" onClick={handleShareInvite} disabled={busy}>
+              <Share2 size={18} />
+              分享同步連結
+            </button>
+            {inviteStatus && <p className="sync-confirmation" role="status">{inviteStatus}</p>}
             <div className="sync-actions">
               <button type="button" className="wide-button secondary" onClick={() => sync.syncNow().catch(() => {})} disabled={busy}>
                 <RefreshCw size={18} />

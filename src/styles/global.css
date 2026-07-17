@@ -731,6 +731,10 @@ dd {
   gap: 8px;
 }
 
+.sync-share-button {
+  width: 100%;
+}
+
 .sync-actions .wide-button {
   width: auto;
   flex: 1 1 190px;

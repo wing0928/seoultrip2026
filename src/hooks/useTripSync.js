@@ -12,7 +12,7 @@ const SAVE_DELAY = 650;
 const CLIENT_ID_KEY = 'seoul-trip-2026:sync-client-id';
 
 export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, setWishlist }) {
-  const initialCodeRef = useRef(loadSyncCode());
+  const initialCodeRef = useRef(loadSyncCodeFromInvite() || loadSyncCode());
   const storedCode = initialCodeRef.current;
   const [syncCode, setSyncCode] = useState(storedCode);
   const [status, setStatus] = useState(() => {
@@ -141,6 +141,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
       connectedCodeRef.current = normalizedCode;
       readyRef.current = true;
       saveSyncCode(normalizedCode);
+      clearSyncInviteFromUrl(normalizedCode);
       setSyncCode(normalizedCode);
       setLastSyncedAt(payload.updatedAt || new Date().toISOString());
 
@@ -286,6 +287,31 @@ export function normalizeSyncCode(code) {
 
 export function formatSyncCode(code) {
   return normalizeSyncCode(code).replace(/(.{4})(?=.)/g, '$1-');
+}
+
+export function createSyncInviteUrl(code) {
+  const normalizedCode = normalizeSyncCode(code);
+  if (!isValidSyncCode(normalizedCode)) return '';
+
+  const url = new URL(window.location.href);
+  url.hash = new URLSearchParams({ sync: normalizedCode }).toString();
+  return url.toString();
+}
+
+function loadSyncCodeFromInvite() {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const code = normalizeSyncCode(params.get('sync'));
+  return isValidSyncCode(code) ? code : '';
+}
+
+function clearSyncInviteFromUrl(code) {
+  const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if (normalizeSyncCode(params.get('sync')) !== code) return;
+
+  params.delete('sync');
+  const hash = params.toString();
+  const cleanUrl = `${window.location.pathname}${window.location.search}${hash ? `#${hash}` : ''}`;
+  window.history.replaceState(window.history.state, '', cleanUrl);
 }
 
 function generateSyncCode() {
