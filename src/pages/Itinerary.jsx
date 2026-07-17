@@ -5,6 +5,7 @@ import LinkButton from '../components/LinkButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
 import { routeMapUrl } from '../utils/maps.js';
+import { formatPlaceType } from '../utils/placePresentation.js';
 
 const emptyStop = {
   timeHours: '',
@@ -293,7 +294,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
           <label>主要顯示名稱<input value={form.name} onChange={(event) => updateField('name', event.target.value)} placeholder="例如 景福宮" /></label>
           <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如 경복궁" /></label>
           <label>中文名稱<input value={form.nameZh} onChange={(event) => updateField('nameZh', event.target.value)} placeholder="例如 景福宮" /></label>
-          <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{typeOptions.map((type) => <option key={type}>{type}</option>)}</select></label>
+          <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{typeOptions.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
           <label>地區<input value={form.area} onChange={(event) => updateField('area', event.target.value)} placeholder="例如 弘大 / 聖水 / 漢南" /></label>
           <label className="full">地點簡述<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="寫下必吃、交通、營業時間或排隊提醒" /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>

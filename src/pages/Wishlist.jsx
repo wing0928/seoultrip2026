@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, MessagesSquare, Pencil, Plus, RefreshCw, Sparkles, Star, Trash2, X } from 'lucide-react';
+import { CheckCircle2, Pencil, Plus, RefreshCw, Sparkles, Star, Trash2, X } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import LinkButton from '../components/LinkButton.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
 import { googleMapUrl, placeMapUrl, searchMapUrl } from '../utils/maps.js';
 import { getGooglePlaceDetails, googlePlacesConfigured, hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
+import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const emptyForm = {
   nameKo: '',
@@ -38,7 +39,6 @@ export default function Wishlist({ wishlist, setWishlist }) {
   const [googleStatus, setGoogleStatus] = useState({});
   const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
 
-  const areaOptions = useMemo(() => ['全部', ...districts.map((district) => district.name)], []);
   const filtered = wishlist.filter((item) => {
     const normalizedArea = districtForArea(item.area).name;
     return (typeFilter === '全部' || item.type === typeFilter) && (areaFilter === '全部' || normalizedArea === areaFilter);
@@ -179,14 +179,34 @@ export default function Wishlist({ wishlist, setWishlist }) {
         </div>
       </div>
 
-      <div className="filter-row">
-        <select aria-label="依類型篩選" value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}><option>全部</option>{types.map((type) => <option key={type}>{type}</option>)}</select>
-        <select aria-label="依地區篩選" value={areaFilter} onChange={(event) => { setAreaFilter(event.target.value); if (event.target.value !== '全部') setSelectedDistrictId(districtForArea(event.target.value).id); }}>{areaOptions.map((area) => <option key={area}>{area}</option>)}</select>
+      <div className="wishlist-filter-panel" aria-label="願望清單篩選">
+        <div className="filter-scroll-track" role="group" aria-label="依類型篩選">
+          <button className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>🧭 全部</button>
+          {types.map((type) => (
+            <button key={type} className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
+              {placeTypeEmoji(type)} {type}
+            </button>
+          ))}
+        </div>
+        <div className="filter-scroll-track district-filter-track" role="group" aria-label="依地區篩選">
+          <button className={areaFilter === '全部' ? 'active' : ''} aria-pressed={areaFilter === '全部'} onClick={() => setAreaFilter('全部')}>全部地區</button>
+          {districts.map((district) => (
+            <button
+              key={district.id}
+              className={areaFilter === district.name ? 'active' : ''}
+              style={{ '--filter-color': district.color }}
+              aria-pressed={areaFilter === district.name}
+              onClick={() => { setAreaFilter(district.name); setSelectedDistrictId(district.id); }}
+            >
+              <span />#{district.name}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="place-list wishlist-list">
         {filtered.map((item) => {
-          const displayName = item.nameZh || item.chineseName || item.nameKo || item.koreanName || item.name;
+          const displayName = formatPlaceName(item);
           const district = districtForArea(item.area);
           const details = googleDetails[item.id];
           const status = googleStatus[item.id];
@@ -198,11 +218,11 @@ export default function Wishlist({ wishlist, setWishlist }) {
                   <div>
                     <p className="meta">{item.priority}</p>
                     <h3>{displayName}</h3>
-                    {item.nameKo && item.nameKo !== displayName && <p className="name-subtitle">{item.nameKo}</p>}
                   </div>
-                  <span className={`type-pill type-${item.type}`}>{item.type}</span>
+                  <span className={`type-pill type-${item.type}`}>{formatPlaceType(item.type)}</span>
                 </div>
                 <button className="place-area-tag" style={{ '--tag-color': district.color }} onClick={() => setSelectedDistrictId(district.id)}>#{district.name}</button>
+                {supportsDetails && <PlacePhotoStrip details={details} status={status} onOpen={() => openGoogleDialog(item)} />}
                 {item.recommendationSource && <p className="recommendation-source">推薦來源：{item.recommendationSource}</p>}
                 {item.note && <p>{item.note}</p>}
                 {supportsDetails && (
@@ -213,10 +233,9 @@ export default function Wishlist({ wishlist, setWishlist }) {
                   </div>
                 )}
 
-                <div className="button-row">
+                <div className="button-row place-link-row">
                   <LinkButton href={placeMapUrl(item)}>Naver Map</LinkButton>
                   <LinkButton href={googleMapUrl(item)}>Google Maps</LinkButton>
-                  {supportsDetails && <button className="link-button ghost" onClick={() => openGoogleDialog(item)}><MessagesSquare size={17} /> Google 評價</button>}
                   <LinkButton href={item.sourceUrl}>來源</LinkButton>
                 </div>
                 <div className="action-row">
@@ -235,7 +254,7 @@ export default function Wishlist({ wishlist, setWishlist }) {
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setGoogleDialogPlace(null)}>
           <section className="bulk-dialog google-review-dialog" role="dialog" aria-modal="true" aria-labelledby="google-review-title">
             <div className="dialog-head">
-              <div><p className="eyebrow">Google Places</p><h2 id="google-review-title">{googleDialogPlace.nameZh || googleDialogPlace.nameKo || googleDialogPlace.name}</h2></div>
+              <div><p className="eyebrow">Google Places</p><h2 id="google-review-title">{formatPlaceName(googleDialogPlace)}</h2></div>
               <button className="icon-button" onClick={() => setGoogleDialogPlace(null)} aria-label="關閉"><X size={20} /></button>
             </div>
             {!googlePlacesConfigured ? (
@@ -265,7 +284,7 @@ export default function Wishlist({ wishlist, setWishlist }) {
             <form className="form-grid spacious-form dialog-form" onSubmit={submit}>
               <label>中文名稱<input value={form.nameZh} onChange={(event) => updateField('nameZh', event.target.value)} placeholder="例如：滿杯阿里郎包飯本店" /></label>
               <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如：만배아리랑보쌈 본점" /></label>
-              <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{types.map((type) => <option key={type}>{type}</option>)}</select></label>
+              <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{types.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
               <label>優先度<select value={form.priority} onChange={(event) => updateField('priority', event.target.value)}>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
               <fieldset className="area-fieldset full">
                 <legend>地區</legend>
@@ -301,7 +320,7 @@ export default function Wishlist({ wishlist, setWishlist }) {
             {bulkPreview.length > 0 && (
               <div className="bulk-preview">
                 <div className="bulk-preview-head"><strong>已整理 {bulkPreview.length} 個地點</strong><span>優先度可在加入後編輯</span></div>
-                <ol>{bulkPreview.map((item) => <li key={item.id}><span>{item.nameZh || item.nameKo}</span><small>{item.nameKo && item.nameKo !== item.nameZh ? `${item.nameKo} · ` : ''}#{districtForArea(item.area).name} · {item.type}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small></li>)}</ol>
+                <ol>{bulkPreview.map((item) => <li key={item.id}><span>{formatPlaceName(item)}</span><small>#{districtForArea(item.area).name} · {formatPlaceType(item.type)}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small></li>)}</ol>
               </div>
             )}
             <div className="dialog-actions">
@@ -311,6 +330,22 @@ export default function Wishlist({ wishlist, setWishlist }) {
           </section>
         </div>
       )}
+    </div>
+  );
+}
+
+function PlacePhotoStrip({ details, status, onOpen }) {
+  const photos = details?.photos?.slice(0, 2) || [];
+  if (!photos.length && status !== 'loading') return null;
+
+  return (
+    <div className={`place-photo-strip ${photos.length ? '' : 'loading'}`} aria-label="Google 店家照片">
+      {photos.length ? photos.map((photo, index) => (
+        <button key={photo.url} type="button" onClick={onOpen} aria-label={`查看 ${details.displayName} 的 Google 評價與照片`}>
+          <img src={photo.url} alt={`${details.displayName} 店家照片 ${index + 1}`} loading="lazy" />
+          {photo.authors?.[0]?.name && <span>照片：{photo.authors[0].name}</span>}
+        </button>
+      )) : <><span /><span /></>}
     </div>
   );
 }

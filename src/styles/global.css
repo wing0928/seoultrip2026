@@ -965,20 +965,17 @@ textarea {
   stroke-width: 2px;
 }
 
-.district-shape:hover,
 .district-shape.active,
 .district-shape:focus-visible {
   transform: scale(1.035);
   filter: drop-shadow(0 8px 7px rgba(45, 49, 56, 0.2));
 }
 
-.district-base:hover,
 .district-base.active,
 .district-base:focus-visible {
   transform: scale(1.01);
 }
 
-.district-shape:hover path,
 .district-shape.active path,
 .district-shape:focus-visible path {
   fill: var(--district-active);
@@ -1107,8 +1104,120 @@ textarea {
   overflow: hidden;
 }
 
+.wishlist-filter-panel {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: 7px;
+  padding: 8px 0;
+  overflow: hidden;
+  background: rgba(247, 243, 234, 0.94);
+  backdrop-filter: blur(12px);
+}
+
+.filter-scroll-track {
+  display: flex;
+  gap: 7px;
+  padding: 2px 1px 5px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: none;
+}
+
+.filter-scroll-track::-webkit-scrollbar {
+  display: none;
+}
+
+.filter-scroll-track button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.filter-scroll-track button.active {
+  border-color: var(--blue-dark);
+  background: var(--blue-dark);
+  color: #fff;
+}
+
+.district-filter-track button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.district-filter-track button span {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--filter-color, #8a9298);
+}
+
+.district-filter-track button.active {
+  border-color: var(--filter-color, var(--blue-dark));
+  background: color-mix(in srgb, var(--filter-color, var(--blue-dark)) 18%, white);
+  color: color-mix(in srgb, var(--filter-color, var(--blue-dark)) 78%, #111);
+}
+
 .place-card-body {
   padding: 14px;
+}
+
+.place-photo-strip {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.place-photo-strip button,
+.place-photo-strip.loading > span {
+  position: relative;
+  min-width: 0;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #eef1f2;
+}
+
+.place-photo-strip img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.place-photo-strip button > span {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  max-width: calc(100% - 8px);
+  padding: 2px 4px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.9);
+  color: #4d535b;
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.place-photo-strip.loading > span {
+  animation: photo-pulse 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes photo-pulse {
+  to { background: #dfe7eb; }
 }
 
 .recommendation-source {
@@ -1142,6 +1251,17 @@ textarea {
 
 .google-rating-strip + .button-row {
   margin-top: 12px;
+}
+
+.wishlist-list .place-link-row {
+  gap: 6px;
+  margin-top: 11px;
+}
+
+.wishlist-list .place-link-row .link-button {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 0.78rem;
 }
 
 .place-area-tag {

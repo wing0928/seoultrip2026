@@ -1,9 +1,10 @@
 import { MapPin, Navigation } from 'lucide-react';
 import LinkButton from './LinkButton.jsx';
 import { googleMapUrl, placeMapUrl } from '../utils/maps.js';
+import { formatPlaceName, formatPlaceType } from '../utils/placePresentation.js';
 
 export default function PlaceCard({ place, compact = false, actions = null }) {
-  const displayName = place.nameZh || place.chineseName || place.nameKo || place.koreanName || place.name || '未命名地點';
+  const displayName = formatPlaceName(place);
 
   return (
     <article className={`place-card ${compact ? 'compact' : ''}`}>
@@ -11,9 +12,8 @@ export default function PlaceCard({ place, compact = false, actions = null }) {
         <div>
           <p className="meta">{place.time || place.period || place.source || '地點'}</p>
           <h3>{displayName}</h3>
-          {place.nameKo && place.nameKo !== displayName && <p className="name-subtitle">{place.nameKo}</p>}
         </div>
-        <span className={`type-pill type-${place.type}`}>{place.type}</span>
+        <span className={`type-pill type-${place.type}`}>{formatPlaceType(place.type)}</span>
       </div>
       <p className="area"><MapPin size={15} /> {place.area || '待確認'}</p>
       {place.note && <p>{place.note}</p>}

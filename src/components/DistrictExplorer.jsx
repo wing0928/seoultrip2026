@@ -30,8 +30,6 @@ export default function DistrictExplorer({ selectedId = 'myeongdong', onSelect }
                   tabIndex="0"
                   aria-label={district.name}
                   aria-pressed={active}
-                  onMouseEnter={() => select(district.id)}
-                  onFocus={() => select(district.id)}
                   onClick={() => select(district.id)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
