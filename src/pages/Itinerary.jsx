@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Navigation, Pencil, Plus, Trash2, X } from 'lucide-react';
-import InfoCard from '../components/InfoCard.jsx';
 import LinkButton from '../components/LinkButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
@@ -16,7 +15,11 @@ const emptyStop = {
   nameZh: '',
   type: '景點',
   area: '',
-  note: ''
+  note: '',
+  recommendationSource: '',
+  sourceUrl: '',
+  naverMapUrl: '',
+  googleMapUrl: ''
 };
 
 const emptyDay = {
@@ -35,6 +38,17 @@ const emptyTransport = {
 
 const typeOptions = ['景點', '美食', '咖啡廳', '逛街', '拍照點', '交通', '休息', '其他'];
 const transportModes = ['地鐵', '公車', '步行', '計程車', 'AREX / 鐵路', '包車', '待確認'];
+const periodLabels = {
+  上午: '☀️ 上午',
+  中午: '🍚 中午',
+  下午: '🌤️ 下午',
+  晚上: '🌙 晚上'
+};
+
+function shortDate(date = '') {
+  const matched = String(date).match(/(\d{1,2})[/-](\d{1,2})$/);
+  return matched ? `${Number(matched[1])}/${Number(matched[2])}` : date;
+}
 
 export default function Itinerary({ trip, itinerary, setItinerary, wishlist = [] }) {
   const [editing, setEditing] = useState(null);
@@ -43,6 +57,8 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   const [dayForm, setDayForm] = useState(emptyDay);
   const [transportEditing, setTransportEditing] = useState(null);
   const [transportForm, setTransportForm] = useState(emptyTransport);
+  const [selectedDayId, setSelectedDayId] = useState(() => itinerary[0]?.id || '');
+  const [periodFilter, setPeriodFilter] = useState('全部');
 
   function startAdd(dayId, period = '上午', anchor = 'day') {
     const isSameAdd = editing?.mode === 'add' && editing.dayId === dayId && editing.period === period && editing.anchor === anchor;
@@ -70,7 +86,11 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       nameZh: stop.nameZh || stop.chineseName || '',
       type: stop.type || '景點',
       area: stop.area || '',
-      note: stop.note || ''
+      note: stop.note || '',
+      recommendationSource: stop.recommendationSource || '',
+      sourceUrl: stop.sourceUrl || '',
+      naverMapUrl: stop.naverMapUrl || '',
+      googleMapUrl: stop.googleMapUrl || ''
     });
   }
 
@@ -127,8 +147,26 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       nameZh: item.nameZh || item.chineseName || '',
       type: item.type || current.type,
       area: item.area || '',
-      note: item.note || item.reason || current.note
+      note: item.note || item.reason || current.note,
+      recommendationSource: item.recommendationSource || '',
+      sourceUrl: item.sourceUrl || '',
+      naverMapUrl: item.naverMapUrl || '',
+      googleMapUrl: item.googleMapUrl || ''
     }));
+  }
+
+  function selectDay(dayId) {
+    setSelectedDayId(dayId);
+    setPeriodFilter('全部');
+    cancelEdit();
+    cancelDayEdit();
+    cancelTransportEdit();
+  }
+
+  function selectPeriod(period) {
+    setPeriodFilter(period);
+    cancelEdit();
+    cancelTransportEdit();
   }
 
   function updateDayField(field, value) {
@@ -362,51 +400,99 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
     );
   }
 
+  const selectedDay = itinerary.find((day) => day.id === selectedDayId) || itinerary[0];
+  const selectedDayIndex = itinerary.findIndex((day) => day.id === selectedDay?.id);
+  const visiblePeriods = selectedDay
+    ? (periodFilter === '全部'
+        ? periods.filter((period) => (
+            selectedDay.stops.some((stop) => stop.period === period)
+            || (editing?.mode === 'add' && editing.dayId === selectedDay.id && editing.period === period)
+          ))
+        : [periodFilter])
+    : [];
+
+  if (!selectedDay) return <p className="empty">目前沒有行程資料。</p>;
+
   return (
-    <div className="stack">
-      <InfoCard title={`${trip.tripName} 行程草稿`}>
-        <p className="soft-text">行程頁與總覽頁共用同一份資料；新增、修改行程或名稱後，總覽頁會同步更新。</p>
-      </InfoCard>
-      {itinerary.map((day) => (
-        <section className="day-section" key={day.id}>
-          <div className="day-head"><div><p className="meta">{day.date}</p><h2>{day.title}</h2></div><span>{day.areaFocus}</span></div>
-          <p className="day-note">{day.note}</p>
-          <div className="day-actions">
-            <button className="wide-button secondary" onClick={() => startAdd(day.id)}><Plus size={18} /> 新增這天的行程</button>
-            <button className="wide-button secondary" onClick={() => startDayEdit(day)}><Pencil size={18} /> {dayEditingId === day.id ? '關閉大主題編輯' : '編輯大主題'}</button>
-          </div>
-          {dayEditingId === day.id && dayEditor()}
-          {editing?.mode === 'add' && editing.dayId === day.id && editing.anchor === 'day' && stopEditor('新增行程')}
-          {periods.map((period) => {
-            const stops = day.stops.filter((stop) => stop.period === period);
-            const isAddingHere = editing?.mode === 'add' && editing.dayId === day.id && editing.period === period && editing.anchor === 'period';
-            return (
-              <div className="period-block" key={period}>
-                <div className="period-head"><h3>{period}</h3><button className="mini-button" onClick={() => startAdd(day.id, period, 'period')}><Plus size={15} /> 新增</button></div>
-                {isAddingHere && stopEditor(`新增${period}行程`)}
-                <div className="place-list">
-                  {stops.map((stop) => {
-                    const stopIndex = day.stops.findIndex((item) => item.id === stop.id);
-                    const previous = stopIndex > 0 ? day.stops[stopIndex - 1] : null;
-                    const isEditingThisStop = editing?.mode === 'edit' && editing.stopId === stop.id;
-                    return (
-                      <div className="editable-place" key={stop.id}>
-                        {previous && transportBlock(day.id, previous, stop)}
-                        <PlaceCard
-                          place={stop}
-                          actions={<><button onClick={() => startEdit(day.id, stop)}>{isEditingThisStop ? <X size={17} /> : <Pencil size={17} />}{isEditingThisStop ? '關閉' : '編輯'}</button><button className="danger" onClick={() => deleteStop(day.id, stop.id)}><Trash2 size={17} /> 刪除</button></>}
-                        />
-                        {isEditingThisStop && stopEditor('編輯行程')}
-                      </div>
-                    );
-                  })}
-                  {!stops.length && <p className="empty inline">這個時段還沒有行程。</p>}
-                </div>
+    <div className="stack itinerary-page">
+      <div className="wishlist-toolbar itinerary-toolbar">
+        <div>
+          <p className="eyebrow">Itinerary</p>
+          <h2>{trip.tripName} 行程</h2>
+        </div>
+        <div className="wishlist-toolbar-actions">
+          <button className="wide-button secondary toolbar-button" onClick={() => startDayEdit(selectedDay)}><Pencil size={18} /> 編輯主題</button>
+          <button className="wide-button toolbar-button" onClick={() => startAdd(selectedDay.id, periodFilter === '全部' ? '上午' : periodFilter, 'day')}><Plus size={18} /> 新增行程</button>
+        </div>
+      </div>
+
+      <div className="wishlist-filter-panel itinerary-filter-panel" aria-label="行程篩選">
+        <div className="filter-scroll-track itinerary-day-track" role="tablist" aria-label="選擇日期">
+          {itinerary.map((day, index) => (
+            <button
+              key={day.id}
+              className={selectedDay.id === day.id ? 'active' : ''}
+              aria-selected={selectedDay.id === day.id}
+              role="tab"
+              title={day.title}
+              onClick={() => selectDay(day.id)}
+            >
+              第 {index + 1} 天 · {shortDate(day.date)}
+            </button>
+          ))}
+        </div>
+        <div className="filter-scroll-track" role="group" aria-label="依時段篩選">
+          <button className={periodFilter === '全部' ? 'active' : ''} aria-pressed={periodFilter === '全部'} onClick={() => selectPeriod('全部')}>🗓️ 全部時段</button>
+          {periods.map((period) => (
+            <button key={period} className={periodFilter === period ? 'active' : ''} aria-pressed={periodFilter === period} onClick={() => selectPeriod(period)}>{periodLabels[period]}</button>
+          ))}
+        </div>
+      </div>
+
+      <section className="itinerary-day-summary" aria-labelledby={`day-title-${selectedDay.id}`}>
+        <div className="day-head">
+          <div><p className="meta">第 {selectedDayIndex + 1} 天 · {selectedDay.date}</p><h2 id={`day-title-${selectedDay.id}`}>{selectedDay.title}</h2></div>
+          <span>{selectedDay.areaFocus}</span>
+        </div>
+        {selectedDay.note && <p className="day-note">{selectedDay.note}</p>}
+        {dayEditingId === selectedDay.id && dayEditor()}
+        {editing?.mode === 'add' && editing.dayId === selectedDay.id && editing.anchor === 'day' && stopEditor('新增行程')}
+      </section>
+
+      <div className="itinerary-period-list">
+        {visiblePeriods.map((period) => {
+          const stops = selectedDay.stops.filter((stop) => stop.period === period);
+          const isAddingHere = editing?.mode === 'add' && editing.dayId === selectedDay.id && editing.period === period && editing.anchor === 'period';
+          return (
+            <section className="itinerary-period-section" key={period}>
+              <div className="period-head">
+                <div><p className="eyebrow">{period}</p><h3>{periodLabels[period]}行程</h3></div>
+                <button className="mini-button" onClick={() => startAdd(selectedDay.id, period, 'period')}><Plus size={15} /> 新增</button>
               </div>
-            );
-          })}
-        </section>
-      ))}
+              {isAddingHere && stopEditor(`新增${period}行程`)}
+              <div className="place-list itinerary-list">
+                {stops.map((stop) => {
+                  const stopIndex = selectedDay.stops.findIndex((item) => item.id === stop.id);
+                  const previous = stopIndex > 0 ? selectedDay.stops[stopIndex - 1] : null;
+                  const isEditingThisStop = editing?.mode === 'edit' && editing.stopId === stop.id;
+                  return (
+                    <div className="editable-place" key={stop.id}>
+                      {previous && transportBlock(selectedDay.id, previous, stop)}
+                      <PlaceCard
+                        place={stop}
+                        actions={<><button onClick={() => startEdit(selectedDay.id, stop)}>{isEditingThisStop ? <X size={17} /> : <Pencil size={17} />}{isEditingThisStop ? '關閉' : '編輯'}</button><button className="danger" onClick={() => deleteStop(selectedDay.id, stop.id)}><Trash2 size={17} /> 刪除</button></>}
+                      />
+                      {isEditingThisStop && stopEditor('編輯行程')}
+                    </div>
+                  );
+                })}
+                {!stops.length && <p className="empty inline">這個時段還沒有行程。</p>}
+              </div>
+            </section>
+          );
+        })}
+        {!visiblePeriods.length && <p className="empty">這一天還沒有行程。</p>}
+      </div>
     </div>
   );
 }

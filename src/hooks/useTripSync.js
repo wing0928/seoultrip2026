@@ -10,6 +10,7 @@ import {
 
 const SAVE_DELAY = 650;
 const CLIENT_ID_KEY = 'seoul-trip-2026:sync-client-id';
+const DEFAULT_PUBLIC_APP_URL = 'https://wing0928.github.io/seoultrip2026/';
 
 export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, setWishlist }) {
   const initialCodeRef = useRef(loadSyncCodeFromInvite() || loadSyncCode());
@@ -293,7 +294,8 @@ export function createSyncInviteUrl(code) {
   const normalizedCode = normalizeSyncCode(code);
   if (!isValidSyncCode(normalizedCode)) return '';
 
-  const url = new URL(window.location.href);
+  const publicAppUrl = String(import.meta.env.VITE_PUBLIC_APP_URL || DEFAULT_PUBLIC_APP_URL).trim();
+  const url = new URL(publicAppUrl || window.location.href);
   url.hash = new URLSearchParams({ sync: normalizedCode }).toString();
   return url.toString();
 }

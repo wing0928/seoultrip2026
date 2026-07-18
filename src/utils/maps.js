@@ -1,5 +1,14 @@
 const NAVER_MAP_SEARCH = 'https://map.naver.com/p/search/';
 const GOOGLE_MAP_SEARCH = 'https://www.google.com/maps/search/?api=1&query=';
+const NAVER_MAP_SCHEME = 'nmap://search';
+const NAVER_MAP_ANDROID_INTENT = 'intent://search';
+const NAVER_MAP_ANDROID_PACKAGE = 'com.nhn.android.nmap';
+const NAVER_WEB_APP_NAME = 'https://wing0928.github.io/seoultrip2026/';
+const NAVER_LINK_SEARCH_ALIASES = {
+  IMyG5Odj: '문츠바베큐',
+  '5eGT08VK': '몽탄',
+  '5AmfnBTN': '풍천장어 연남점'
+};
 
 function withoutEnglishSeoul(query = '') {
   return String(query).replace(/\bSeoul\b/gi, ' ').replace(/\s+/g, ' ').trim();
@@ -20,6 +29,27 @@ export function placeMapUrl(place) {
   if (place.googleMapUrl?.includes('naver.com')) return cleanNaverSearchUrl(place.googleMapUrl);
   if (place.mapUrl?.includes('naver.com')) return cleanNaverSearchUrl(place.mapUrl);
   return searchMapUrl(placeSearchQuery(place));
+}
+
+export function naverMapAppUrl(place) {
+  const query = encodeURIComponent(naverAppSearchQuery(place));
+  const appName = encodeURIComponent(NAVER_WEB_APP_NAME);
+  return `${NAVER_MAP_SCHEME}?query=${query}&appname=${appName}`;
+}
+
+export function naverMapAndroidIntentUrl(place) {
+  const query = encodeURIComponent(naverAppSearchQuery(place));
+  const appName = encodeURIComponent(NAVER_WEB_APP_NAME);
+  return `${NAVER_MAP_ANDROID_INTENT}?query=${query}&appname=${appName}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=${NAVER_MAP_ANDROID_PACKAGE};end`;
+}
+
+function naverAppSearchQuery(place) {
+  const naverUrl = String(place?.naverMapUrl || place?.mapUrl || '');
+  const aliasKey = Object.keys(NAVER_LINK_SEARCH_ALIASES).find((key) => naverUrl.includes(key));
+  if (aliasKey) return NAVER_LINK_SEARCH_ALIASES[aliasKey];
+
+  const koreanName = String(place?.nameKo || place?.koreanName || '').trim();
+  return koreanName || placeSearchQuery(place) || '서울';
 }
 
 export function googleMapUrl(place) {

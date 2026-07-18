@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Pencil, Plus, RefreshCw, Sparkles, Star, Trash2, X } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import LinkButton from '../components/LinkButton.jsx';
+import NaverMapButton from '../components/NaverMapButton.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
-import { googleMapUrl, placeMapUrl, searchMapUrl } from '../utils/maps.js';
+import { googleMapUrl, searchMapUrl } from '../utils/maps.js';
 import { getGooglePlaceDetails, googlePlacesConfigured, hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
@@ -234,7 +235,7 @@ export default function Wishlist({ wishlist, setWishlist }) {
                 )}
 
                 <div className="button-row place-link-row">
-                  <LinkButton href={placeMapUrl(item)}>Naver Map</LinkButton>
+                  <NaverMapButton place={item} />
                   <LinkButton href={googleMapUrl(item)}>Google Maps</LinkButton>
                   <LinkButton href={item.sourceUrl}>來源</LinkButton>
                 </div>

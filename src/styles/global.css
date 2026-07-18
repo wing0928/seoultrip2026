@@ -1108,6 +1108,72 @@ textarea {
   overflow: hidden;
 }
 
+.itinerary-page {
+  gap: 12px;
+}
+
+.itinerary-day-track button {
+  min-width: 105px;
+}
+
+.itinerary-day-summary {
+  padding: 14px 4px 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.itinerary-day-summary .day-note {
+  max-width: 760px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.itinerary-period-list,
+.itinerary-period-section {
+  display: grid;
+  gap: 12px;
+}
+
+.itinerary-period-list {
+  gap: 20px;
+}
+
+.itinerary-period-section + .itinerary-period-section {
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.itinerary-period-section .period-head {
+  padding: 0 2px;
+}
+
+.itinerary-period-section .period-head h3 {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.itinerary-list .place-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.itinerary-list .place-link-row {
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.itinerary-list .place-link-row .link-button {
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 0.78rem;
+}
+
+.itinerary-list .action-row button {
+  min-height: 36px;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}
+
 .wishlist-filter-panel {
   position: sticky;
   top: 0;
