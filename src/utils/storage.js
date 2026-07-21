@@ -15,6 +15,16 @@ export const DEFAULT_TRIP = {
   departureAirport: '仁川國際機場（ICN）Terminal 1｜2026/8/22 12:05'
 };
 
+const DEFAULTED_TRIP_FIELDS = [
+  'hotelName',
+  'hotelAddress',
+  'hotelMapUrl',
+  'outboundFlight',
+  'returnFlight',
+  'arrivalAirport',
+  'departureAirport'
+];
+
 const KEYS = {
   trip: 'seoul-trip-2026:settings',
   wishlist: 'seoul-trip-2026:wishlist',
@@ -24,7 +34,16 @@ const KEYS = {
 };
 
 export function loadTripSettings() {
-  return { ...DEFAULT_TRIP, ...loadJson(KEYS.trip, {}) };
+  const savedTrip = loadJson(KEYS.trip, {});
+  const trip = { ...DEFAULT_TRIP, ...savedTrip };
+
+  DEFAULTED_TRIP_FIELDS.forEach((field) => {
+    if (!String(savedTrip[field] || '').trim() || savedTrip[field] === '待補') {
+      trip[field] = DEFAULT_TRIP[field];
+    }
+  });
+
+  return trip;
 }
 
 export function saveTripSettings(settings) {
