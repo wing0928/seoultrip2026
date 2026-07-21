@@ -55,6 +55,7 @@ export default function NaverMapButton({ place, children = 'Naver Map', variant 
       target="_blank"
       rel="noreferrer"
       data-mobile-app-url={appUrl}
+      title="手機直接開啟 Naver Map App"
       onClick={openNaverMap}
     >
       {children}

@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Navigation, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import LinkButton from '../components/LinkButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
+import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
+import { hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
 import { routeMapUrl } from '../utils/maps.js';
 import { formatPlaceType } from '../utils/placePresentation.js';
 
@@ -36,7 +39,7 @@ const emptyTransport = {
   note: ''
 };
 
-const typeOptions = ['景點', '美食', '咖啡廳', '逛街', '拍照點', '交通', '休息', '其他'];
+const typeOptions = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '商店', '購物中心', '逛街', '拍照點', '交通', '休息', '其他'];
 const transportModes = ['地鐵', '公車', '步行', '計程車', 'AREX / 鐵路', '包車', '待確認'];
 const periodLabels = {
   上午: '☀️ 上午',
@@ -50,6 +53,12 @@ function shortDate(date = '') {
   return matched ? `${Number(matched[1])}/${Number(matched[2])}` : date;
 }
 
+function showsGoogleDetails(place) {
+  return supportsGoogleDetails(place) && Boolean(
+    place.naverMapUrl || place.googleMapUrl || place.sourceUrl || place.recommendationSource
+  );
+}
+
 export default function Itinerary({ trip, itinerary, setItinerary, wishlist = [] }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyStop);
@@ -59,6 +68,9 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   const [transportForm, setTransportForm] = useState(emptyTransport);
   const [selectedDayId, setSelectedDayId] = useState(() => itinerary[0]?.id || '');
   const [periodFilter, setPeriodFilter] = useState('全部');
+  const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
+  const googleStops = itinerary.flatMap((day) => day.stops).filter(showsGoogleDetails);
+  const { googleDetails, googleStatus, loadGoogleDetails } = useGooglePlaceDetails(googleStops);
 
   function startAdd(dayId, period = '上午', anchor = 'day') {
     const isSameAdd = editing?.mode === 'add' && editing.dayId === dayId && editing.period === period && editing.anchor === anchor;
@@ -167,6 +179,14 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
     setPeriodFilter(period);
     cancelEdit();
     cancelTransportEdit();
+  }
+
+  function openGoogleDialog(stop) {
+    setGoogleDialogPlace(stop);
+    const details = googleDetails[stop.id];
+    if ((!details || !hasCurrentGooglePhotoUrls(details)) && googleStatus[stop.id] !== 'loading') {
+      loadGoogleDetails(stop);
+    }
   }
 
   function updateDayField(field, value) {
@@ -480,6 +500,10 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
                       {previous && transportBlock(selectedDay.id, previous, stop)}
                       <PlaceCard
                         place={stop}
+                        googleDetails={googleDetails[stop.id]}
+                        googleStatus={googleStatus[stop.id]}
+                        showGoogleDetails={showsGoogleDetails(stop)}
+                        onOpenGoogle={() => openGoogleDialog(stop)}
                         actions={<><button onClick={() => startEdit(selectedDay.id, stop)}>{isEditingThisStop ? <X size={17} /> : <Pencil size={17} />}{isEditingThisStop ? '關閉' : '編輯'}</button><button className="danger" onClick={() => deleteStop(selectedDay.id, stop.id)}><Trash2 size={17} /> 刪除</button></>}
                       />
                       {isEditingThisStop && stopEditor('編輯行程')}
@@ -493,6 +517,14 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
         })}
         {!visiblePeriods.length && <p className="empty">這一天還沒有行程。</p>}
       </div>
+
+      <GoogleReviewDialog
+        place={googleDialogPlace}
+        details={googleDialogPlace ? googleDetails[googleDialogPlace.id] : null}
+        status={googleDialogPlace ? googleStatus[googleDialogPlace.id] : ''}
+        onClose={() => setGoogleDialogPlace(null)}
+        onRefresh={() => loadGoogleDetails(googleDialogPlace, true)}
+      />
     </div>
   );
 }

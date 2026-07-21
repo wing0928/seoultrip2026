@@ -1335,6 +1335,8 @@ textarea {
 }
 
 .place-area-tag {
+  display: inline-flex;
+  align-items: center;
   margin-top: 10px;
   padding: 5px 9px;
   border: 1px solid color-mix(in srgb, var(--tag-color) 62%, white);
@@ -1343,6 +1345,10 @@ textarea {
   color: color-mix(in srgb, var(--tag-color) 78%, #111);
   font-size: 0.78rem;
   font-weight: 850;
+}
+
+.place-area-tag.static {
+  cursor: default;
 }
 
 .modal-backdrop {

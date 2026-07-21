@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, Pencil, Plus, RefreshCw, Sparkles, Star, Trash2, X } from 'lucide-react';
+import { useState } from 'react';
+import { CheckCircle2, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
-import LinkButton from '../components/LinkButton.jsx';
-import NaverMapButton from '../components/NaverMapButton.jsx';
+import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
+import PlaceCard from '../components/PlaceCard.jsx';
 import { districtForArea, districts } from '../data/districts.js';
+import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
-import { googleMapUrl, searchMapUrl } from '../utils/maps.js';
-import { getGooglePlaceDetails, googlePlacesConfigured, hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
+import { hasCurrentGooglePhotoUrls } from '../utils/googlePlaces.js';
+import { searchMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const emptyForm = {
@@ -36,44 +37,13 @@ export default function Wishlist({ wishlist, setWishlist }) {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState(emptyBulk);
   const [bulkPreview, setBulkPreview] = useState([]);
-  const [googleDetails, setGoogleDetails] = useState({});
-  const [googleStatus, setGoogleStatus] = useState({});
   const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
+  const { googleDetails, googleStatus, loadGoogleDetails } = useGooglePlaceDetails(wishlist);
 
   const filtered = wishlist.filter((item) => {
     const normalizedArea = districtForArea(item.area).name;
     return (typeFilter === '全部' || item.type === typeFilter) && (areaFilter === '全部' || normalizedArea === areaFilter);
   });
-  const googleItemsKey = useMemo(() => wishlist
-    .filter(supportsGoogleDetails)
-    .map((item) => `${item.id}:${item.nameKo || item.nameZh || item.name}:${item.area}`)
-    .join('|'), [wishlist]);
-
-  useEffect(() => {
-    if (!googlePlacesConfigured) return undefined;
-    let cancelled = false;
-    const eligibleItems = wishlist.filter(supportsGoogleDetails);
-
-    async function hydrateRatings() {
-      for (const item of eligibleItems) {
-        if (cancelled) return;
-        setGoogleStatus((current) => ({ ...current, [item.id]: 'loading' }));
-        try {
-          const details = await getGooglePlaceDetails(item);
-          if (cancelled) return;
-          setGoogleDetails((current) => ({ ...current, [item.id]: details }));
-          setGoogleStatus((current) => ({ ...current, [item.id]: 'ready' }));
-        } catch (error) {
-          if (cancelled) return;
-          setGoogleStatus((current) => ({ ...current, [item.id]: error.code || 'error' }));
-        }
-      }
-    }
-
-    hydrateRatings();
-    return () => { cancelled = true; };
-  }, [googleItemsKey]);
-
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
   }
@@ -145,18 +115,6 @@ export default function Wishlist({ wishlist, setWishlist }) {
     setBulkPreview([]);
   }
 
-  async function loadGoogleDetails(item, refresh = false) {
-    if (!googlePlacesConfigured) return;
-    setGoogleStatus((current) => ({ ...current, [item.id]: 'loading' }));
-    try {
-      const details = await getGooglePlaceDetails(item, { refresh });
-      setGoogleDetails((current) => ({ ...current, [item.id]: details }));
-      setGoogleStatus((current) => ({ ...current, [item.id]: 'ready' }));
-    } catch (error) {
-      setGoogleStatus((current) => ({ ...current, [item.id]: error.code || 'error' }));
-    }
-  }
-
   function openGoogleDialog(item) {
     setGoogleDialogPlace(item);
     const details = googleDetails[item.id];
@@ -207,73 +165,32 @@ export default function Wishlist({ wishlist, setWishlist }) {
 
       <div className="place-list wishlist-list">
         {filtered.map((item) => {
-          const displayName = formatPlaceName(item);
-          const district = districtForArea(item.area);
           const details = googleDetails[item.id];
           const status = googleStatus[item.id];
-          const supportsDetails = supportsGoogleDetails(item);
           return (
-            <article className={`place-card ${item.visited ? 'visited' : ''}`} key={item.id}>
-              <div className="place-card-body">
-                <div className="place-top">
-                  <div>
-                    <p className="meta">{item.priority}</p>
-                    <h3>{displayName}</h3>
-                  </div>
-                  <span className={`type-pill type-${item.type}`}>{formatPlaceType(item.type)}</span>
-                </div>
-                <button className="place-area-tag" style={{ '--tag-color': district.color }} onClick={() => setSelectedDistrictId(district.id)}>#{district.name}</button>
-                {supportsDetails && <PlacePhotoStrip details={details} status={status} onOpen={() => openGoogleDialog(item)} />}
-                {item.recommendationSource && <p className="recommendation-source">推薦來源：{item.recommendationSource}</p>}
-                {item.note && <p>{item.note}</p>}
-                {supportsDetails && (
-                  <div className="google-rating-strip" aria-label="Google 星等">
-                    <Star size={18} fill={details?.rating ? 'currentColor' : 'none'} />
-                    <strong>{details?.rating ? details.rating.toFixed(1) : '—'}</strong>
-                    <span>{details?.userRatingCount ? `${details.userRatingCount.toLocaleString()} 則 Google 評價` : (status === 'loading' ? '載入 Google 評價中' : 'Google 星等尚未取得')}</span>
-                  </div>
-                )}
-
-                <div className="button-row place-link-row">
-                  <NaverMapButton place={item} />
-                  <LinkButton href={googleMapUrl(item)}>Google Maps</LinkButton>
-                  <LinkButton href={item.sourceUrl}>來源</LinkButton>
-                </div>
-                <div className="action-row">
-                  <button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button>
-                  <button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button>
-                  <button className="danger" onClick={() => setWishlist((items) => items.filter((old) => old.id !== item.id))}><Trash2 size={17} /> 刪除</button>
-                </div>
-              </div>
-            </article>
+            <PlaceCard
+              key={item.id}
+              place={item}
+              visited={item.visited}
+              googleDetails={details}
+              googleStatus={status}
+              showGoogleDetails
+              onOpenGoogle={() => openGoogleDialog(item)}
+              onAreaSelect={(district) => setSelectedDistrictId(district.id)}
+              actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => setWishlist((items) => items.filter((old) => old.id !== item.id))}><Trash2 size={17} /> 刪除</button></>}
+            />
           );
         })}
         {!filtered.length && <p className="empty">還沒有符合條件的願望。先加一個吧。</p>}
       </div>
 
-      {googleDialogPlace && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && setGoogleDialogPlace(null)}>
-          <section className="bulk-dialog google-review-dialog" role="dialog" aria-modal="true" aria-labelledby="google-review-title">
-            <div className="dialog-head">
-              <div><p className="eyebrow">Google Places</p><h2 id="google-review-title">{formatPlaceName(googleDialogPlace)}</h2></div>
-              <button className="icon-button" onClick={() => setGoogleDialogPlace(null)} aria-label="關閉"><X size={20} /></button>
-            </div>
-            {!googlePlacesConfigured ? (
-              <div className="google-empty-state"><Star size={24} /><strong>尚未連接 Google Places</strong><span>完成 Supabase Edge Function 設定後即可顯示星等與照片。</span></div>
-            ) : googleStatus[googleDialogPlace.id] === 'loading' ? (
-              <div className="google-empty-state"><RefreshCw className="spin" size={24} /><strong>正在載入 Google 評價</strong></div>
-            ) : googleDetails[googleDialogPlace.id] ? (
-              <GoogleReviewContent
-                details={googleDetails[googleDialogPlace.id]}
-                fallbackMapUrl={googleMapUrl(googleDialogPlace)}
-                onRefresh={() => loadGoogleDetails(googleDialogPlace, true)}
-              />
-            ) : (
-              <div className="google-empty-state"><Star size={24} /><strong>找不到相符的 Google 店家資料</strong><button className="mini-button" onClick={() => loadGoogleDetails(googleDialogPlace, true)}><RefreshCw size={16} /> 再試一次</button></div>
-            )}
-          </section>
-        </div>
-      )}
+      <GoogleReviewDialog
+        place={googleDialogPlace}
+        details={googleDialogPlace ? googleDetails[googleDialogPlace.id] : null}
+        status={googleDialogPlace ? googleStatus[googleDialogPlace.id] : ''}
+        onClose={() => setGoogleDialogPlace(null)}
+        onRefresh={() => loadGoogleDetails(googleDialogPlace, true)}
+      />
 
       {editorOpen && (
         <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && closeEditor()}>
@@ -331,59 +248,6 @@ export default function Wishlist({ wishlist, setWishlist }) {
           </section>
         </div>
       )}
-    </div>
-  );
-}
-
-function PlacePhotoStrip({ details, status, onOpen }) {
-  const photos = details?.photos?.slice(0, 2) || [];
-  if (!photos.length && status !== 'loading') return null;
-
-  return (
-    <div className={`place-photo-strip ${photos.length ? '' : 'loading'}`} aria-label="Google 店家照片">
-      {photos.length ? photos.map((photo, index) => (
-        <button key={photo.url} type="button" onClick={onOpen} aria-label={`查看 ${details.displayName} 的 Google 評價與照片`}>
-          <img src={photo.url} alt={`${details.displayName} 店家照片 ${index + 1}`} loading="lazy" />
-          {photo.authors?.[0]?.name && <span>照片：{photo.authors[0].name}</span>}
-        </button>
-      )) : <><span /><span /></>}
-    </div>
-  );
-}
-
-function GoogleReviewContent({ details, fallbackMapUrl, onRefresh }) {
-  return (
-    <div className="google-review-content">
-      <div className="google-review-score">
-        <Star size={25} fill="currentColor" />
-        <strong>{details.rating ? details.rating.toFixed(1) : '—'}</strong>
-        <span>{details.userRatingCount ? `${details.userRatingCount.toLocaleString()} 則評價` : '尚無評論數'}</span>
-        <button className="icon-button" onClick={onRefresh} aria-label="重新整理 Google 評價" title="重新整理 Google 評價"><RefreshCw size={17} /></button>
-      </div>
-      {details.address && <p className="google-place-address">{details.address}</p>}
-
-      <div className="google-photo-grid">
-        {[0, 1].map((index) => {
-          const photo = details.photos?.[index];
-          return photo ? (
-            <figure key={photo.url}>
-              <img src={photo.url} alt={`${details.displayName} 店家照片 ${index + 1}`} />
-              {photo.authors?.[0]?.name && <figcaption>照片：{photo.authors[0].name}</figcaption>}
-            </figure>
-          ) : <div className="google-photo-placeholder" key={index}>暫無照片</div>;
-        })}
-      </div>
-
-      <section className="google-ai-summary">
-        <h3>Google AI 摘要</h3>
-        {details.aiSummary ? <p>{details.aiSummary}</p> : <p className="soft-text">Google 目前未提供此首爾店家的 AI 摘要。</p>}
-        {details.aiDisclosure && <small>{details.aiDisclosure}</small>}
-      </section>
-
-      <div className="button-row">
-        <LinkButton href={details.aiReviewsUri || details.googleMapsUri || fallbackMapUrl}>查看 Google 評價</LinkButton>
-        {details.aiFlagUri && <LinkButton href={details.aiFlagUri}>回報摘要</LinkButton>}
-      </div>
     </div>
   );
 }
