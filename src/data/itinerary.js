@@ -18,14 +18,14 @@ const rawDays = [
   {
     id: 'day-1',
     date: '2026/8/17',
-    title: '抵達首爾、機場交通、入住',
-    areaFocus: '機場 / 住宿附近',
-    note: '第一天保留體力，重點是順利抵達、買交通卡、入住與附近簡單吃飯。',
+    title: '長榮 BR172 抵達仁川、前往明洞入住',
+    areaFocus: '高雄 / 仁川機場 T1 / 明洞',
+    note: '去程 15:50 從高雄小港 Terminal 1 起飛，19:45 抵達仁川 Terminal 1；入境後直接前往 SL Hotel 明洞。',
     stops: [
-      stop('d1-1', '上午', '上午', '抵達仁川 / 金浦機場', '交通', '機場', '確認行李、換匯或領 WOWPASS，先把 T-money / 交通卡處理好。'),
-      stop('d1-2', '中午', '中午', '機場前往住宿', '交通', '住宿附近', '依實際住宿補 AREX、機場巴士或地鐵路線。'),
-      stop('d1-3', '下午', '下午', '飯店入住與休息', '休息', '住宿附近', '放行李、整理網路與充電設備，不安排遠距離移動。'),
-      stop('d1-4', '晚上', '晚上', '住宿附近晚餐散步', '美食', '住宿附近', '找附近湯飯、炸雞或便利商店補給，早點休息。')
+      stop('d1-1', '15:50', '下午', '長榮 BR172 高雄起飛', '交通', '高雄小港機場', '高雄小港國際機場 Terminal 1 起飛；機型 Airbus A321，經濟艙 Basic。'),
+      stop('d1-2', '19:45', '晚上', '抵達仁川國際機場 Terminal 1', '交通', '仁川機場', '抵達後辦理入境、領取行李，再處理 WOWPASS、T-money 或交通卡。', { nameKo: '인천국제공항 제1여객터미널', nameZh: '仁川國際機場 Terminal 1' }),
+      stop('d1-3', '20:45', '晚上', '仁川機場前往 SL Hotel 明洞', '交通', '明洞', '依抵達時間選擇 AREX 轉地鐵、機場巴士或計程車，前往 SL호텔 명동。', { nameKo: 'SL호텔 명동', nameZh: 'SL Hotel 明洞' }),
+      stop('d1-4', '22:15', '晚上', 'SL Hotel 明洞入住', '休息', '明洞', '辦理入住、整理行李；若需要用餐，以飯店附近便利商店或宵夜為主。', { nameKo: 'SL호텔 명동', nameZh: 'SL Hotel 明洞' })
     ]
   },
   {
@@ -87,17 +87,64 @@ const rawDays = [
   {
     id: 'day-6',
     date: '2026/8/22',
-    title: '退房、簡單吃飯、前往機場',
-    areaFocus: '住宿附近 / 機場',
-    note: '最後一天不排滿，保留退房、寄物、交通緩衝與採買時間。',
+    title: '退房、前往仁川機場、搭乘 BR145 回高雄',
+    areaFocus: '明洞 / 仁川機場 T1 / 高雄',
+    note: '回程 12:05 從仁川 Terminal 1 起飛，14:00 抵達高雄；早上預留交通、報到與安檢時間。',
     stops: [
-      stop('d6-1', '上午', '上午', '整理行李與退房', '休息', '住宿附近', '確認護照、充電器、退稅單、伴手禮與行李重量。'),
-      stop('d6-2', '中午', '中午', '住宿附近簡單午餐', '美食', '住宿附近', '選不用排隊的店，避免影響去機場時間。'),
-      stop('d6-3', '下午', '下午', '最後採買 / 咖啡休息', '逛街', '住宿附近', '只排附近區域，買完直接取行李。'),
-      stop('d6-4', '下午', '下午', '住宿前往機場', '交通', '機場', '依回程航班往前抓足交通與報到時間。')
+      stop('d6-1', '06:30', '上午', '整理行李與 SL Hotel 明洞退房', '休息', '明洞', '確認護照、充電器、退稅單、伴手禮與行李重量；早餐可前一晚先準備。', { nameKo: 'SL호텔 명동', nameZh: 'SL Hotel 明洞' }),
+      stop('d6-2', '07:00', '上午', 'SL Hotel 明洞前往仁川機場', '交通', '明洞 / 仁川機場', '前往仁川國際機場 Terminal 1，預留週六早晨交通與行李移動時間。', { nameKo: '인천국제공항 제1여객터미널', nameZh: '仁川國際機場 Terminal 1' }),
+      stop('d6-3', '09:00', '上午', '仁川機場 Terminal 1 報到與安檢', '交通', '仁川機場', '長榮 BR145 辦理報到、託運、安檢與出境；完成後再安排簡單早餐或免稅店。', { nameKo: '인천국제공항 제1여객터미널', nameZh: '仁川國際機場 Terminal 1' }),
+      stop('d6-4', '12:05', '中午', '長榮 BR145 起飛，返回高雄', '交通', '仁川機場', '仁川 Terminal 1 起飛，預計 14:00 抵達高雄小港 Terminal 1；機型 Airbus A321。')
     ]
   }
 ];
+
+const legacyTripDays = {
+  'day-1': {
+    title: '抵達首爾、機場交通、入住',
+    areaFocus: '機場 / 住宿附近',
+    note: '第一天保留體力，重點是順利抵達、買交通卡、入住與附近簡單吃飯。',
+    stops: {
+      'd1-1': { time: '上午', name: '抵達仁川 / 金浦機場' },
+      'd1-2': { time: '中午', name: '機場前往住宿' },
+      'd1-3': { time: '下午', name: '飯店入住與休息' },
+      'd1-4': { time: '晚上', name: '住宿附近晚餐散步' }
+    }
+  },
+  'day-6': {
+    title: '退房、簡單吃飯、前往機場',
+    areaFocus: '住宿附近 / 機場',
+    note: '最後一天不排滿，保留退房、寄物、交通緩衝與採買時間。',
+    stops: {
+      'd6-1': { time: '上午', name: '整理行李與退房' },
+      'd6-2': { time: '中午', name: '住宿附近簡單午餐' },
+      'd6-3': { time: '下午', name: '最後採買 / 咖啡休息' },
+      'd6-4': { time: '下午', name: '住宿前往機場' }
+    }
+  }
+};
+
+export function migrateTripItinerary(days = []) {
+  return days.map((day) => {
+    const legacyDay = legacyTripDays[day.id];
+    const updatedDay = rawDays.find((item) => item.id === day.id);
+    if (!legacyDay || !updatedDay) return day;
+
+    const updatedStops = new Map(updatedDay.stops.map((item) => [item.id, item]));
+    return {
+      ...day,
+      title: day.title === legacyDay.title ? updatedDay.title : day.title,
+      areaFocus: day.areaFocus === legacyDay.areaFocus ? updatedDay.areaFocus : day.areaFocus,
+      note: day.note === legacyDay.note ? updatedDay.note : day.note,
+      stops: day.stops.map((item) => {
+        const legacyStop = legacyDay.stops[item.id];
+        const updatedStop = updatedStops.get(item.id);
+        if (!legacyStop || !updatedStop || item.name !== legacyStop.name || item.time !== legacyStop.time) return item;
+        return { ...item, ...updatedStop };
+      })
+    };
+  });
+}
 
 export function enrichItinerary(days) {
   return days.map((day) => ({

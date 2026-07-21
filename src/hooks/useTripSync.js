@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { enrichItinerary } from '../data/itinerary.js';
+import { enrichItinerary, migrateTripItinerary } from '../data/itinerary.js';
 import { clearSyncCode, loadSyncCode, saveSyncCode } from '../utils/storage.js';
 import {
   supabase,
@@ -41,7 +41,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
 
     const normalized = {
       trip: state.trip,
-      itinerary: enrichItinerary(state.itinerary),
+      itinerary: enrichItinerary(migrateTripItinerary(state.itinerary)),
       wishlist: state.wishlist
     };
     const current = currentStateRef.current;

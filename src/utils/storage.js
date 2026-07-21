@@ -1,4 +1,4 @@
-import { itineraryDays } from '../data/itinerary.js';
+import { itineraryDays, migrateTripItinerary } from '../data/itinerary.js';
 import { inferPlaceType } from './bulkPlaceParser.js';
 import { searchMapUrl } from './maps.js';
 
@@ -99,7 +99,7 @@ export function saveImports(items) {
 }
 
 export function loadItinerary() {
-  return loadJson(KEYS.itinerary, itineraryDays);
+  return migrateTripItinerary(loadJson(KEYS.itinerary, itineraryDays));
 }
 
 export function saveItinerary(days) {
