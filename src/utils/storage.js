@@ -1,17 +1,18 @@
 import { itineraryDays } from '../data/itinerary.js';
 import { inferPlaceType } from './bulkPlaceParser.js';
+import { searchMapUrl } from './maps.js';
 
 export const DEFAULT_TRIP = {
   tripName: 'Seoul Trip 2026',
   dates: '2026/8/17–8/22',
   nights: '6 天 5 夜',
-  hotelName: '待補',
-  hotelAddress: '待補',
-  hotelMapUrl: '',
-  outboundFlight: '待補',
-  returnFlight: '待補',
-  arrivalAirport: '待補',
-  departureAirport: '待補'
+  hotelName: 'SL Hotel 明洞（SL호텔 명동）',
+  hotelAddress: '50-6 Chungmuro 2(i)-ga, Jung District, Seoul, 南韓',
+  hotelMapUrl: searchMapUrl('SL호텔 명동'),
+  outboundFlight: '2026/8/17 長榮航空 BR172｜高雄 KHH Terminal 1 15:50 → 仁川 ICN Terminal 1 19:45｜A321・2 小時 55 分・經濟艙 Basic',
+  returnFlight: '2026/8/22 長榮航空 BR145｜仁川 ICN Terminal 1 12:05 → 高雄 KHH Terminal 1 14:00｜A321・2 小時 55 分・經濟艙 Basic',
+  arrivalAirport: '仁川國際機場（ICN）Terminal 1｜2026/8/17 19:45',
+  departureAirport: '仁川國際機場（ICN）Terminal 1｜2026/8/22 12:05'
 };
 
 const KEYS = {
