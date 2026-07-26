@@ -3,6 +3,7 @@ import test from 'node:test';
 import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
 import { googleMapEmbedUrl, googleMapUrl } from '../src/utils/maps.js';
 import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
+import { migrateWishlist } from '../src/utils/storage.js';
 
 test('Google Maps search uses only the resolved place name', () => {
   const url = new URL(googleMapUrl({
@@ -76,6 +77,17 @@ test('bulk parser recognizes Dongdaemun aliases', () => {
   const [place] = parseBulkPlaces({
     text: '1. 동대문 의류 상가\nDDP 附近'
   });
+  assert.equal(place.area, '東大門');
+});
+
+test('wishlist migration moves existing Dongdaemun places out of Other', () => {
+  const [place] = migrateWishlist([{
+    id: 'dongdaemun-market',
+    nameZh: '東大門綜合市場',
+    nameKo: '동대문종합시장',
+    area: '其他',
+    type: '景點'
+  }]);
   assert.equal(place.area, '東大門');
 });
 

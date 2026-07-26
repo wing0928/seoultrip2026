@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { enrichItinerary, migrateTripItinerary } from '../data/itinerary.js';
-import { clearSyncCode, loadSyncCode, saveSyncCode } from '../utils/storage.js';
+import { clearSyncCode, loadSyncCode, migrateWishlist, saveSyncCode } from '../utils/storage.js';
 import {
   supabase,
   supabaseConfigured,
@@ -42,8 +42,9 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
     const normalized = {
       trip: state.trip,
       itinerary: enrichItinerary(migrateTripItinerary(state.itinerary)),
-      wishlist: state.wishlist
+      wishlist: migrateWishlist(state.wishlist)
     };
+    const wishlistWasMigrated = fingerprint(state.wishlist) !== fingerprint(normalized.wishlist);
     const current = currentStateRef.current;
     const tripChanged = fingerprint(current.trip) !== fingerprint(normalized.trip);
     const itineraryChanged = fingerprint(current.itinerary) !== fingerprint(normalized.itinerary);
@@ -51,7 +52,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
 
     if (!tripChanged && !itineraryChanged && !wishlistChanged) return;
 
-    applyingRemoteRef.current = true;
+    applyingRemoteRef.current = !wishlistWasMigrated;
     currentStateRef.current = normalized;
     if (tripChanged) setTrip(normalized.trip);
     if (itineraryChanged) setItinerary(normalized.itinerary);

@@ -53,7 +53,7 @@ export function saveTripSettings(settings) {
 export function loadWishlist() {
   const wishlist = loadJson(KEYS.wishlist, []);
   const imports = loadJson(KEYS.imports, []);
-  if (!imports.length) return reclassifyBulkPlaces(wishlist);
+  if (!imports.length) return migrateWishlist(wishlist);
 
   const knownIds = new Set(wishlist.map((item) => item.id));
   const migrated = imports
@@ -64,25 +64,30 @@ export function loadWishlist() {
       name: '',
       priority: item.priority || '想去',
       visited: Boolean(item.visited)
-    }));
+  }));
   localStorage.removeItem(KEYS.imports);
-  return reclassifyBulkPlaces([...migrated, ...wishlist]);
+  return migrateWishlist([...migrated, ...wishlist]);
 }
 
-function reclassifyBulkPlaces(items) {
+export function migrateWishlist(items = []) {
   return items.map((item) => {
+    const placeNames = `${item.nameZh || item.chineseName || item.name || ''} ${item.nameKo || item.koreanName || ''}`;
+    const area = (!item.area || ['其他', '待確認'].includes(item.area)) && /東大門|동대문|\bDDP\b/i.test(placeNames)
+      ? '東大門'
+      : item.area;
     const isBulkPlace = item.bulkImported || (
       item.note &&
       item.recommendationSource &&
       item.sourceUrl &&
       (item.naverMapUrl || item.googleMapUrl)
     );
-    if (!isBulkPlace) return item;
+    if (!isBulkPlace) return area === item.area ? item : { ...item, area };
 
     const wasLegacyShop = item.type === '商店';
     const inferredType = inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource);
     return {
       ...item,
+      area,
       type: wasLegacyShop ? inferLegacyShopType(item) : inferredType,
       needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
     };
