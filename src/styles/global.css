@@ -1376,6 +1376,10 @@ textarea {
   z-index: 1;
 }
 
+.google-map-frame.map-base-hidden {
+  visibility: hidden;
+}
+
 .map-status-overlay {
   position: absolute;
   inset: 0;

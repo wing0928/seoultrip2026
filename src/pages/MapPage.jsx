@@ -237,7 +237,12 @@ export default function MapPage({ wishlist = [] }) {
 
           {visiblePlaces.length ? (
             <div className="google-map-stage">
-              <div ref={mapNodeRef} className="google-map-frame" aria-label={`${selectedDistrict.name}願望景點 Google 地圖`} />
+              <div
+                ref={mapNodeRef}
+                className={`google-map-frame ${['fallback', 'error'].includes(mapStatus.state) ? 'map-base-hidden' : ''}`}
+                aria-label={`${selectedDistrict.name}願望景點 Google 地圖`}
+                aria-hidden={['fallback', 'error'].includes(mapStatus.state)}
+              />
               {['fallback', 'error'].includes(mapStatus.state) && selectedPlace && (
                 <iframe
                   key={selectedPlace.id}
