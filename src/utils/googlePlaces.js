@@ -5,11 +5,11 @@ const FUNCTION_URL = String(
   import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL ||
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
 ).trim();
-const CACHE_KEY = 'seoul-trip-2026:google-places-cache';
+const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v3';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export const googlePlacesConfigured = Boolean(FUNCTION_URL);
-export const BUSINESS_LOOKUP_VERSION = 2;
+export const BUSINESS_LOOKUP_VERSION = 3;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
@@ -31,7 +31,9 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
   const payload = await callGooglePlaces({
     action: 'details',
     query,
-    placeId: place.googlePlaceId || ''
+    placeId: place.googlePlaceId || '',
+    type: place.type || '',
+    note: place.note || ''
   });
   if (!payload.place) throw new GooglePlacesError('not_found', 'Google 找不到相符店家');
 
@@ -62,14 +64,15 @@ export async function resolvePlaceIdentity(place) {
 export async function enrichPlaceIdentity(place) {
   const resolution = await resolvePlaceIdentity(place);
   const lookupName = resolution.nameKo || resolution.nameZhSimplified || place.nameZh || place.nameKo;
+  const acceptedPlace = ['verified', 'simplified_verified'].includes(resolution.status) && resolution.googlePlaceId;
   return {
     ...place,
     nameKo: resolution.verified ? (resolution.nameKo || place.nameKo || '') : (place.nameKo || ''),
     nameZhSimplified: resolution.nameZhSimplified || '',
     lookupName,
-    googlePlaceId: resolution.googlePlaceId || '',
-    googleMapUrl: resolution.googleMapsUri || place.googleMapUrl || '',
-    naverMapUrl: place.naverMapUrl || searchMapUrl(lookupName),
+    googlePlaceId: acceptedPlace ? resolution.googlePlaceId : '',
+    googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : '',
+    naverMapUrl: preservedNaverUrl(place) || searchMapUrl(lookupName),
     type: resolution.type || normalizeLegacyShopType(place),
     googleDetailsEligible: resolution.reviewEligible === true,
     businessLookupVersion: BUSINESS_LOOKUP_VERSION,
@@ -82,7 +85,7 @@ export async function enrichPlaceIdentity(place) {
 
 export function needsBusinessIdentityRefresh(place) {
   if (!place || place.businessLookupVersion >= BUSINESS_LOOKUP_VERSION) return false;
-  return place.type === '商店' || place.needsBusinessLookup === true;
+  return place.businessLookupVersion === 2 || place.type === '商店' || place.needsBusinessLookup === true;
 }
 
 export class GooglePlacesError extends Error {
@@ -111,6 +114,12 @@ function normalizeLegacyShopType(place) {
   if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
   if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
   return place?.type === '商店' ? '其他' : (place?.type || '其他');
+}
+
+function preservedNaverUrl(place) {
+  const url = String(place?.naverMapUrl || '').trim();
+  if (!url) return '';
+  return /naver\.me/i.test(url) || !/\/p\/search\//i.test(url) ? url : '';
 }
 
 function readCache() {

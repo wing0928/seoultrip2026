@@ -74,8 +74,12 @@ Deno.serve(async (request) => {
     if (placeId) {
       place = await fetchPlaceDetails(placeId, 'zh-TW', apiKey);
     } else {
-      const places = await searchPlaces(query, 'zh-TW', apiKey, 1);
-      place = places[0] || null;
+      const places = await searchPlaces(query, 'zh-TW', apiKey, 5);
+      place = places.find((candidate) => (
+        isKoreanPlace(candidate) &&
+        namesMatch(query, candidate.displayName?.text) &&
+        isCandidateTypeCompatible(candidate, body?.type)
+      )) || null;
     }
     if (!place) return json({ code: 'not_found', error: 'Google 找不到相符店家' }, 404, cors);
 
@@ -104,7 +108,9 @@ async function resolveIdentity(
 
   const traditionalCandidates = await searchPlaces(originalName, 'zh-TW', apiKey, 5);
   const verifiedCandidate = traditionalCandidates.find((candidate) => (
-    isKoreanPlace(candidate) && namesMatch(originalName, candidate.displayName?.text)
+    isKoreanPlace(candidate) &&
+    namesMatch(originalName, candidate.displayName?.text) &&
+    isCandidateTypeCompatible(candidate, body?.type)
   ));
   const simplifiedName = safeSimplified(originalName);
 
@@ -137,7 +143,11 @@ async function resolveIdentity(
   const fallbackCandidates = simplifiedName
     ? await searchPlaces(simplifiedName, 'zh-CN', apiKey, 5)
     : [];
-  const fallbackPlace = fallbackCandidates.find(isKoreanPlace) || null;
+  const fallbackPlace = fallbackCandidates.find((candidate) => (
+    isKoreanPlace(candidate) &&
+    namesMatch(simplifiedName, candidate.displayName?.text) &&
+    isCandidateTypeCompatible(candidate, body?.type)
+  )) || null;
   const fallbackDetails = fallbackPlace
     ? await fetchPlaceDetails(fallbackPlace.id, 'zh-CN', apiKey)
     : null;
@@ -145,11 +155,11 @@ async function resolveIdentity(
 
   return json({
     resolution: {
-      status: place ? 'simplified_fallback' : 'not_found',
+      status: place ? 'simplified_verified' : 'not_found',
       verified: false,
       message: place
-        ? '繁體中文結果未通過同店驗證，已改用簡體中文查詢'
-        : '繁體中文結果未通過同店驗證，簡體中文也找不到韓國商家',
+        ? '繁體中文結果未通過驗證，簡體中文已通過同店名稱與類型驗證'
+        : '繁體與簡體中文結果都未通過同店名稱與類型驗證，未綁定 Google Place ID',
       inputName: originalName,
       searchName: simplifiedName || originalName,
       nameKo: '',
@@ -283,6 +293,37 @@ function inferBusinessType(place: GooglePlace | null, currentType: unknown, note
   if (types.has('shopping_mall') || types.has('department_store')) return '購物中心';
   if (currentType === '商店' || types.has('clothing_store')) return '其他';
   return String(currentType || '其他');
+}
+
+function isCandidateTypeCompatible(place: GooglePlace | null, requestedType: unknown) {
+  if (!place) return false;
+  const type = String(requestedType || '');
+  const types = new Set([place.primaryType, ...(place.types || [])].filter(Boolean));
+  const hasAny = (values: string[]) => values.some((value) => types.has(value));
+  const foodTypes = [
+    'restaurant',
+    'cafe',
+    'bakery',
+    'bar',
+    'food',
+    'meal_delivery',
+    'meal_takeaway'
+  ];
+  const shopTypes = [
+    'store',
+    'clothing_store',
+    'mens_clothing_store',
+    'womens_clothing_store',
+    'shopping_mall',
+    'department_store'
+  ];
+
+  if (['餐廳', '美食', '小吃'].includes(type)) return hasAny(foodTypes);
+  if (type === '咖啡廳') return hasAny(['cafe', 'bakery', 'food']);
+  if (['男裝', '女裝', '商店', '購物中心', '逛街'].includes(type)) return hasAny(shopTypes);
+  if (type === '景點') return !hasAny(foodTypes) && !hasAny(shopTypes);
+  if (!type || type === '其他') return isReviewEligible(place);
+  return true;
 }
 
 function isReviewEligible(place: GooglePlace | null) {

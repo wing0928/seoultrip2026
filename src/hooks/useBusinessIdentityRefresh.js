@@ -36,6 +36,9 @@ export default function useBusinessIdentityRefresh(wishlist, setWishlist, { enab
         updated = {
           ...item,
           type: item.type === '商店' ? inferLegacyShopType(item) : item.type,
+          googlePlaceId: '',
+          googleMapUrl: '',
+          googleDetailsEligible: false,
           businessLookupVersion: BUSINESS_LOOKUP_VERSION,
           needsBusinessLookup: false,
           businessLookupStatus: error?.code || 'error',
