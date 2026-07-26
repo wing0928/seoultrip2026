@@ -88,3 +88,42 @@ test('screenshot parser splits OCR-damaged emoji bullets by following addresses'
   const bulkPlaces = parseBulkPlaces({ text: screenshotPlacesToBulkText(places) });
   assert.ok(bulkPlaces.every((place) => place.area === '北村韓屋與景福宮'));
 });
+
+test('screenshot parser creates one store per Instagram tag and repairs OCR at-signs', () => {
+  const places = parseScreenshotPlaces(`
+    從1號出口出來後
+    先去漂亮咖啡廳 @folki_official
+    很喜歡韓國都可以喝到無咖啡因的咖啡
+    再來是選品店 Getcseoul 男女裝都很好逛
+    肚子餓吃釜飯 @solsot_official
+    手工針織店 @grandmaroom.seochon
+    美術館 @groundseesaw
+    @daelimmuseum 第二家大林美術館
+    再來搜尋 @monoha_official
+    這個品牌版型、材質都很實在
+    這間店在的路上超多好逛的店家
+    @homeofhai.seoul.store @baserange.store.seoul
+    @colocynth.official 是我喜歡的品牌
+    轉到小巷子有 @ofrseoul @arkisto.kr
+    跟非常有質感的 @shop_amomento
+    最後是文具店 @papierprost
+  `, 'instagram-list.jpg');
+
+  assert.deepEqual(places.map((place) => place.name), [
+    'folki',
+    'etcseoul',
+    'solsot',
+    'grandmaroom seochon',
+    'groundseesaw',
+    'daelimmuseum',
+    'monoha',
+    'homeofhai',
+    'baserange',
+    'colocynth',
+    'ofrseoul',
+    'arkisto',
+    'amomento',
+    'papierprost'
+  ]);
+  assert.match(places[0].description, /Instagram：@folki_official/);
+});

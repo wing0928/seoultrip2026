@@ -59,6 +59,9 @@ export function parseScreenshotPlaces(text, filename = '') {
     return groups.map((group) => parseStructuredEntry(group, filename, sharedContext)).filter(Boolean);
   }
 
+  const instagramEntries = parseInstagramEntries(lines, filename);
+  if (instagramEntries.length) return instagramEntries;
+
   const labelled = lines
     .map((line) => line.match(LABELLED_NAME)?.[1]?.trim())
     .find(Boolean);
@@ -177,6 +180,85 @@ function isLikelyHeader(line) {
   if (!line || isNoise(line) || isAddressLine(line)) return false;
   if (line.length > 80 || /https?:\/\//i.test(line)) return false;
   return /[A-Za-z\u3400-\u9fff가-힣]/.test(line);
+}
+
+function parseInstagramEntries(lines, filename) {
+  const candidates = [];
+  lines.forEach((line, lineIndex) => {
+    extractInstagramHandles(line).forEach((handle) => {
+      candidates.push({ handle, lineIndex });
+    });
+  });
+  const uniqueCandidates = candidates.filter((candidate, index) => (
+    candidates.findIndex((item) => item.handle === candidate.handle) === index
+  ));
+  if (!uniqueCandidates.length) return [];
+  if (uniqueCandidates.length === 1 && !hasPlaceContext(lines, uniqueCandidates[0].lineIndex)) return [];
+
+  const tagLineIndexes = new Set(uniqueCandidates.map((candidate) => candidate.lineIndex));
+  return uniqueCandidates.map(({ handle, lineIndex }) => {
+    const context = instagramContext(lines, lineIndex, tagLineIndexes);
+    return {
+      name: instagramHandleName(handle),
+      instagramHandle: `@${handle}`,
+      description: [`Instagram：@${handle}`, ...context].join('；').slice(0, 360) ||
+        `收藏貼文截圖：${filename || '未命名圖片'}`,
+      rawText: context.join('\n')
+    };
+  });
+}
+
+function extractInstagramHandles(line) {
+  const handles = [...String(line).matchAll(/@([a-z0-9][a-z0-9._]{1,29})/gi)]
+    .map((match) => trimInstagramHandle(match[1]));
+  if (/(?:店|品牌|咖啡|美術館|餐廳|文具|服飾|男女裝|好逛)/.test(line)) {
+    for (const match of String(line).matchAll(/\bG([a-z][a-z0-9._]{3,29})\b/g)) {
+      handles.push(trimInstagramHandle(match[1]));
+    }
+  }
+  return [...new Set(handles.filter(Boolean))];
+}
+
+function trimInstagramHandle(handle) {
+  return String(handle).toLowerCase().replace(/[._]+$/g, '');
+}
+
+function instagramHandleName(handle) {
+  return String(handle)
+    .replace(/^shop[._-]+/, '')
+    .replace(/(?:[._-]+official|[._-]+seoul[._-]+store|[._-]+store[._-]+seoul|[._-]+kr)$/g, '')
+    .replace(/[._]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim() || handle;
+}
+
+function instagramContext(lines, lineIndex, tagLineIndexes) {
+  const context = [];
+  const previous = lines[lineIndex - 1] || '';
+  if (previous && !tagLineIndexes.has(lineIndex - 1) && !isNoise(previous)) context.push(previous);
+
+  const current = stripInstagramHandles(lines[lineIndex] || '');
+  if (current && !isNoise(current)) context.push(current);
+
+  for (let index = lineIndex + 1; index < lines.length && context.length < 4; index += 1) {
+    if (tagLineIndexes.has(index)) break;
+    const line = stripInstagramHandles(lines[index]);
+    if (line && !isNoise(line)) context.push(line);
+  }
+  return [...new Set(context)];
+}
+
+function stripInstagramHandles(line) {
+  return String(line)
+    .replace(/@[a-z0-9][a-z0-9._]{1,29}/gi, ' ')
+    .replace(/\bG[a-z][a-z0-9._]{3,29}\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function hasPlaceContext(lines, lineIndex) {
+  const nearby = lines.slice(Math.max(0, lineIndex - 2), lineIndex + 3).join(' ');
+  return /店|品牌|咖啡|美術館|餐廳|文具|服飾|男女裝|市場|好逛|釜飯|工藝/.test(nearby);
 }
 
 function cleanCandidateName(value) {
