@@ -14,7 +14,7 @@ test('Google Maps search uses only the resolved place name', () => {
   assert.equal(url.searchParams.get('query_place_id'), null);
 });
 
-test('Google Maps link uses the verified Place ID without the district', () => {
+test('Google Maps link uses the saved Place ID without the district', () => {
   const url = new URL(googleMapUrl({
     nameZh: '夢炭',
     nameKo: '몽탄',

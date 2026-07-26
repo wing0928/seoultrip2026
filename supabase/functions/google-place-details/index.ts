@@ -80,12 +80,8 @@ Deno.serve(async (request) => {
     if (placeId) {
       place = await fetchPlaceDetails(placeId, 'zh-TW', apiKey);
     } else {
-      const places = await searchPlaces(query, 'zh-TW', apiKey, 5, body?.area, body?.type);
-      place = places.find((candidate) => (
-        isKoreanPlace(candidate) &&
-        namesMatch(query, candidate.displayName?.text) &&
-        isCandidateTypeCompatible(candidate, body?.type)
-      )) || null;
+      const places = await searchPlaces(query, 'zh-TW', apiKey, 1, body?.area);
+      place = places[0] || null;
     }
     if (!place) return json({ code: 'not_found', error: 'Google 找不到相符店家' }, 404, cors);
 
@@ -112,87 +108,56 @@ async function resolveIdentity(
   const originalName = nameZh || providedNameKo;
   if (!originalName) return json({ code: 'invalid_name', error: '缺少可查詢的店名' }, 400, cors);
 
-  const traditionalCandidates = await searchPlaces(originalName, 'zh-TW', apiKey, 5, body?.area, body?.type);
-  const verifiedCandidate = traditionalCandidates.find((candidate) => (
-    isKoreanPlace(candidate) &&
-    namesMatch(originalName, candidate.displayName?.text) &&
-    isCandidateTypeCompatible(candidate, body?.type)
-  ));
-  const simplifiedName = safeSimplified(originalName);
-
-  if (verifiedCandidate) {
-    const koreanDetails = await fetchPlaceDetails(verifiedCandidate.id, 'ko', apiKey);
-    const displayDetails = await fetchPlaceDetails(verifiedCandidate.id, 'zh-TW', apiKey);
-    const place = displayDetails || verifiedCandidate;
-    const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, providedNameKo);
-    const inferredType = inferBusinessType(place, body?.type, body?.note);
-    return json({
-      resolution: {
-        status: 'verified',
-        verified: true,
-        message: '已用同一個 Google Place ID 驗證繁體中文與韓文店名',
-        inputName: originalName,
-        searchName: nameKo || originalName,
-        nameKo,
-        nameZhSimplified: simplifiedName,
-        googlePlaceId: place.id,
-        googleMapsUri: place.googleMapsUri || '',
-        type: inferredType,
-        reviewEligible: isReviewEligible(place),
-        place: presentPlace(place, request)
-      }
-    }, 200, cors);
+  const simplifiedName = nameZh ? safeSimplified(nameZh) : '';
+  let koreanSearchName = providedNameKo;
+  if (nameZh) {
+    const traditionalCandidates = await searchPlaces(nameZh, 'zh-TW', apiKey, 1, body?.area);
+    if (!koreanSearchName && traditionalCandidates[0]) {
+      const koreanDetails = await fetchPlaceDetails(traditionalCandidates[0].id, 'ko', apiKey);
+      koreanSearchName = cleanKoreanDisplayName(koreanDetails?.displayName?.text, '');
+    }
   }
 
-  const fallbackCandidates = simplifiedName
-    ? await searchPlaces(simplifiedName, 'zh-CN', apiKey, 5, body?.area, body?.type)
-    : [];
-  const fallbackPlace = fallbackCandidates.find((candidate) => (
-    isKoreanPlace(candidate) &&
-    namesMatch(simplifiedName, candidate.displayName?.text) &&
-    isCandidateTypeCompatible(candidate, body?.type)
-  )) || null;
-  if (fallbackPlace) {
-    const fallbackDetails = await fetchPlaceDetails(fallbackPlace.id, 'zh-CN', apiKey);
-    const place = fallbackDetails || fallbackPlace;
-    return json({
-      resolution: {
-        status: 'simplified_verified',
-        verified: false,
-        message: '繁體中文結果未通過驗證，簡體中文已通過同店名稱與類型驗證',
-        inputName: originalName,
-        searchName: simplifiedName || originalName,
-        nameKo: '',
-        nameZhSimplified: simplifiedName,
-        googlePlaceId: place.id,
-        googleMapsUri: place.googleMapsUri || '',
-        type: inferBusinessType(place, body?.type, body?.note),
-        reviewEligible: isReviewEligible(place),
-        place: presentPlace(place, request)
-      }
-    }, 200, cors);
-  }
-
-  if (providedNameKo && hasHangul(providedNameKo)) {
-    for (const koreanSearchName of koreanSearchTerms(providedNameKo)) {
-      const koreanCandidates = await searchPlaces(koreanSearchName, 'ko', apiKey, 5, body?.area);
-      const koreanCandidate = koreanCandidates.find((candidate) => (
-        isKoreanPlace(candidate) &&
-        koreanNamesMatch(koreanSearchName, candidate.displayName?.text) &&
-        isCandidateTypeCompatible(candidate, body?.type)
-      ));
-      if (!koreanCandidate) continue;
+  if (koreanSearchName) {
+    const koreanCandidates = await searchPlaces(koreanSearchName, 'ko', apiKey, 1, body?.area);
+    const koreanCandidate = koreanCandidates[0] || null;
+    if (koreanCandidate) {
       const koreanDetails = await fetchPlaceDetails(koreanCandidate.id, 'ko', apiKey);
       const displayDetails = await fetchPlaceDetails(koreanCandidate.id, 'zh-TW', apiKey);
       const place = displayDetails || koreanDetails || koreanCandidate;
-      const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, providedNameKo);
+      const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, koreanSearchName);
       return json({
         resolution: {
-          status: 'korean_verified',
-          verified: true,
-          message: '繁中與簡體未通過驗證，已用原韓文名稱核對同一間店',
+          status: 'korean_match',
+          message: '已依繁體中文與韓文名稱順序取得 Google 商家資料',
           inputName: originalName,
-          searchName: nameKo,
+          searchName: nameKo || koreanSearchName,
+          nameKo,
+          nameZhSimplified: simplifiedName,
+          googlePlaceId: place.id,
+          googleMapsUri: place.googleMapsUri || '',
+          type: inferBusinessType(place, body?.type, body?.note),
+          reviewEligible: isReviewEligible(place),
+          place: presentPlace(place, request)
+        }
+      }, 200, cors);
+    }
+  }
+
+  if (simplifiedName) {
+    const simplifiedCandidates = await searchPlaces(simplifiedName, 'zh-CN', apiKey, 1, body?.area);
+    const simplifiedCandidate = simplifiedCandidates[0] || null;
+    if (simplifiedCandidate) {
+      const koreanDetails = await fetchPlaceDetails(simplifiedCandidate.id, 'ko', apiKey);
+      const displayDetails = await fetchPlaceDetails(simplifiedCandidate.id, 'zh-CN', apiKey);
+      const place = displayDetails || koreanDetails || simplifiedCandidate;
+      const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, koreanSearchName);
+      return json({
+        resolution: {
+          status: 'simplified_fallback',
+          message: '繁體中文與韓文沒有結果，已改用簡體中文名稱取得 Google 商家資料',
+          inputName: originalName,
+          searchName: nameKo || simplifiedName,
           nameKo,
           nameZhSimplified: simplifiedName,
           googlePlaceId: place.id,
@@ -208,11 +173,10 @@ async function resolveIdentity(
   return json({
     resolution: {
       status: 'not_found',
-      verified: false,
-      message: '繁體、簡體與既有韓文名稱都未通過同店名稱與類型驗證，未綁定 Google Place ID',
+      message: '繁體中文、韓文與簡體中文名稱都找不到 Google 商家',
       inputName: originalName,
-      searchName: simplifiedName || originalName,
-      nameKo: '',
+      searchName: simplifiedName || koreanSearchName || originalName,
+      nameKo: koreanSearchName,
       nameZhSimplified: simplifiedName,
       googlePlaceId: '',
       googleMapsUri: '',
@@ -228,12 +192,10 @@ async function searchPlaces(
   languageCode: string,
   apiKey: string,
   pageSize: number,
-  area: unknown = '',
-  requestedType: unknown = ''
+  area: unknown = ''
 ) {
   const center = areaCenter(area);
   const radius = center === SEOUL_CENTER ? 50000 : 9000;
-  const includedType = googleIncludedType(requestedType);
   const response = await fetch(GOOGLE_PLACES_SEARCH_URL, {
     method: 'POST',
     headers: {
@@ -246,7 +208,6 @@ async function searchPlaces(
       languageCode,
       regionCode: 'KR',
       pageSize,
-      ...(includedType ? { includedType } : {}),
       locationBias: {
         circle: {
           center,
@@ -263,15 +224,6 @@ async function searchPlaces(
 function areaCenter(area: unknown) {
   const text = String(area || '');
   return AREA_CENTERS.find((item) => item.pattern.test(text))?.center || SEOUL_CENTER;
-}
-
-function googleIncludedType(requestedType: unknown) {
-  const type = String(requestedType || '');
-  if (['餐廳', '美食', '小吃'].includes(type)) return 'restaurant';
-  if (type === '咖啡廳') return 'cafe';
-  if (['男裝', '女裝', '商店'].includes(type)) return 'store';
-  if (['購物中心', '逛街'].includes(type)) return 'shopping_mall';
-  return '';
 }
 
 async function fetchPlaceDetails(placeId: string, languageCode: string, apiKey: string) {
@@ -333,56 +285,9 @@ function presentPlace(place: GooglePlace, request: Request) {
   };
 }
 
-function namesMatch(input: unknown, candidate: unknown) {
-  const left = normalizeName(input);
-  const right = normalizeName(candidate);
-  if (!left || !right) return false;
-  if (left === right) return true;
-  const shorter = left.length <= right.length ? left : right;
-  const longer = left.length > right.length ? left : right;
-  return shorter.length >= 3 && longer.includes(shorter) && (shorter.length / longer.length) >= 0.58;
-}
-
-function koreanNamesMatch(input: unknown, candidate: unknown) {
-  const left = compactKoreanName(input);
-  const right = compactKoreanName(String(candidate || '').split(/[|ㅣ]/, 1)[0]);
-  if (!left || !right) return false;
-  if (left === right) return true;
-  const shorter = left.length <= right.length ? left : right;
-  const longer = left.length > right.length ? left : right;
-  return shorter.length >= 3 && longer.includes(shorter) && (shorter.length / longer.length) >= 0.58;
-}
-
-function compactKoreanName(value: unknown) {
-  return String(value || '').normalize('NFKC').replace(/[^가-힣0-9]/g, '');
-}
-
 function cleanKoreanDisplayName(value: unknown, fallback: string) {
   const leadingName = String(value || '').split(/[|ㅣ]/, 1)[0].trim();
   return hasHangul(leadingName) ? leadingName : fallback;
-}
-
-function koreanSearchTerms(value: unknown) {
-  const tokens = String(value || '').normalize('NFKC').match(/[가-힣0-9]+/g) || [];
-  const terms = [tokens.join(' '), compactKoreanName(value)];
-  return [...new Set(terms.filter(Boolean))];
-}
-
-function normalizeName(value: unknown) {
-  return String(value || '')
-    .normalize('NFKC')
-    .toLowerCase()
-    .replace(/\b(?:seoul|korea)\b/gi, '')
-    .replace(/(?:首爾|서울|韓國|韩国|대한민국|南韓|南韩)/g, '')
-    .replace(/[\s'"`~!@#$%^&*()_+\-=[\]{};:,.<>/?\\|，。；：！？、（）【】《》「」『』·]/g, '');
-}
-
-function isKoreanPlace(place: GooglePlace) {
-  const country = (place?.addressComponents || []).find((component: GooglePlace) => (
-    Array.isArray(component.types) && component.types.includes('country')
-  ));
-  const countryText = `${country?.shortText || ''} ${country?.longText || ''} ${place?.formattedAddress || ''}`;
-  return /\bKR\b|대한민국|한국|South Korea|Republic of Korea|韓國|韩国|南韓|南韩/i.test(countryText);
 }
 
 function inferBusinessType(place: GooglePlace | null, currentType: unknown, note: unknown) {
@@ -393,37 +298,6 @@ function inferBusinessType(place: GooglePlace | null, currentType: unknown, note
   if (types.has('shopping_mall') || types.has('department_store')) return '購物中心';
   if (currentType === '商店' || types.has('clothing_store')) return '其他';
   return String(currentType || '其他');
-}
-
-function isCandidateTypeCompatible(place: GooglePlace | null, requestedType: unknown) {
-  if (!place) return false;
-  const type = String(requestedType || '');
-  const types = new Set([place.primaryType, ...(place.types || [])].filter(Boolean));
-  const hasAny = (values: string[]) => values.some((value) => types.has(value));
-  const foodTypes = [
-    'restaurant',
-    'cafe',
-    'bakery',
-    'bar',
-    'food',
-    'meal_delivery',
-    'meal_takeaway'
-  ];
-  const shopTypes = [
-    'store',
-    'clothing_store',
-    'mens_clothing_store',
-    'womens_clothing_store',
-    'shopping_mall',
-    'department_store'
-  ];
-
-  if (['餐廳', '美食', '小吃'].includes(type)) return hasAny(foodTypes);
-  if (type === '咖啡廳') return hasAny(['cafe', 'bakery', 'food']);
-  if (['男裝', '女裝', '商店', '購物中心', '逛街'].includes(type)) return hasAny(shopTypes);
-  if (type === '景點') return !hasAny(foodTypes) && !hasAny(shopTypes);
-  if (!type || type === '其他') return isReviewEligible(place);
-  return true;
 }
 
 function isReviewEligible(place: GooglePlace | null) {

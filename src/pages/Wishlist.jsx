@@ -338,10 +338,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
                     <li key={item.id}>
                       <span>{formatPlaceName(item)}</span>
                       <small>#{districtForArea(item.area).name} · {formatPlaceType(item.type)}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small>
-                      {item.businessLookupStatus === 'verified' && <small className="lookup-success">已驗證同一間店，後續固定使用 Google Place ID</small>}
-                      {item.businessLookupStatus === 'korean_verified' && <small className="lookup-success">繁中未通過驗證，已用原韓文名稱核對同一間店</small>}
-                      {item.businessLookupStatus === 'simplified_verified' && <small className="lookup-fallback">繁中未通過驗證，已用簡體重新核對：{item.nameZhSimplified}</small>}
-                      {['not_found', 'error', 'google_error'].includes(item.businessLookupStatus) && <small className="lookup-error">{item.businessLookupNote || '找不到可驗證的商家'}</small>}
+                      {['not_found', 'error', 'google_error'].includes(item.businessLookupStatus) && <small className="lookup-error">{item.businessLookupNote || 'Google 找不到商家'}</small>}
                       {item.note && <small className="lookup-description">{item.note}</small>}
                     </li>
                   ))}

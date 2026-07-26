@@ -5,11 +5,11 @@ const FUNCTION_URL = String(
   import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL ||
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
 ).trim();
-const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v5';
+const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v6';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export const googlePlacesConfigured = Boolean(FUNCTION_URL);
-export const BUSINESS_LOOKUP_VERSION = 5;
+export const BUSINESS_LOOKUP_VERSION = 6;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
@@ -66,10 +66,10 @@ export async function resolvePlaceIdentity(place) {
 export async function enrichPlaceIdentity(place) {
   const resolution = await resolvePlaceIdentity(place);
   const lookupName = resolution.nameKo || resolution.nameZhSimplified || place.nameZh || place.nameKo;
-  const acceptedPlace = ['verified', 'simplified_verified', 'korean_verified'].includes(resolution.status) && resolution.googlePlaceId;
+  const acceptedPlace = Boolean(resolution.googlePlaceId);
   return {
     ...place,
-    nameKo: resolution.verified ? (resolution.nameKo || place.nameKo || '') : (place.nameKo || ''),
+    nameKo: resolution.nameKo || place.nameKo || '',
     nameZhSimplified: resolution.nameZhSimplified || '',
     lookupName,
     googlePlaceId: acceptedPlace ? resolution.googlePlaceId : '',
@@ -87,7 +87,7 @@ export async function enrichPlaceIdentity(place) {
 
 export function needsBusinessIdentityRefresh(place) {
   if (!place || place.businessLookupVersion >= BUSINESS_LOOKUP_VERSION) return false;
-  return [2, 3, 4].includes(place.businessLookupVersion) || place.type === '商店' || place.needsBusinessLookup === true;
+  return [2, 3, 4, 5].includes(place.businessLookupVersion) || place.type === '商店' || place.needsBusinessLookup === true;
 }
 
 export class GooglePlacesError extends Error {

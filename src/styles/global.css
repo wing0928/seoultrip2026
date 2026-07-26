@@ -1627,14 +1627,6 @@ textarea {
   display: block;
 }
 
-.bulk-preview .lookup-success {
-  color: #24704b;
-}
-
-.bulk-preview .lookup-fallback {
-  color: #8a6200;
-}
-
 .bulk-preview .lookup-error {
   color: #b34a45;
 }
