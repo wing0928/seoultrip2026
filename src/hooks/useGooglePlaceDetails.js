@@ -6,7 +6,7 @@ export default function useGooglePlaceDetails(items = []) {
   const [googleStatus, setGoogleStatus] = useState({});
   const eligibleItemsKey = useMemo(() => items
     .filter(supportsGoogleDetails)
-    .map((item) => `${item.id}:${item.nameKo || item.nameZh || item.name}:${item.area}`)
+    .map((item) => `${item.id}:${item.googlePlaceId || item.lookupName || item.nameKo || item.nameZh || item.name}`)
     .join('|'), [items]);
 
   const loadGoogleDetails = useCallback(async (item, refresh = false) => {

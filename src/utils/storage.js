@@ -79,11 +79,21 @@ function reclassifyBulkPlaces(items) {
     );
     if (!isBulkPlace) return item;
 
+    const wasLegacyShop = item.type === '商店';
+    const inferredType = inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource);
     return {
       ...item,
-      type: inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource)
+      type: wasLegacyShop ? inferLegacyShopType(item) : inferredType,
+      needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
     };
   });
+}
+
+function inferLegacyShopType(item) {
+  const text = `${item.nameZh || ''} ${item.nameKo || ''} ${item.note || ''}`;
+  if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
+  if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
+  return '其他';
 }
 
 export function saveWishlist(items) {

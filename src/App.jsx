@@ -7,6 +7,7 @@ import Transport from './pages/Transport.jsx';
 import Wishlist from './pages/Wishlist.jsx';
 import SettingsPage from './pages/SettingsPage.jsx';
 import { enrichItinerary } from './data/itinerary.js';
+import useBusinessIdentityRefresh from './hooks/useBusinessIdentityRefresh.js';
 import { useTripSync } from './hooks/useTripSync.js';
 import {
   loadItinerary,
@@ -34,6 +35,9 @@ export default function App() {
   const [itinerary, setItinerary] = useState(() => enrichItinerary(loadItinerary()));
   const [wishlist, setWishlist] = useState(loadWishlist);
   const sync = useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, setWishlist });
+  const businessRefreshStatus = useBusinessIdentityRefresh(wishlist, setWishlist, {
+    enabled: !['connecting', 'saving'].includes(sync.status)
+  });
 
   useEffect(() => saveTripSettings(trip), [trip]);
   useEffect(() => saveItinerary(itinerary), [itinerary]);
@@ -73,7 +77,7 @@ export default function App() {
         {activePage === 'overview' && <Overview itinerary={itinerary} />}
         {activePage === 'itinerary' && <Itinerary trip={trip} itinerary={itinerary} setItinerary={setItinerary} wishlist={wishlist} />}
         {activePage === 'transport' && <Transport trip={trip} itinerary={itinerary} />}
-        {activePage === 'wishlist' && <Wishlist wishlist={wishlist} setWishlist={setWishlist} />}
+        {activePage === 'wishlist' && <Wishlist wishlist={wishlist} setWishlist={setWishlist} businessRefreshStatus={businessRefreshStatus} />}
         {activePage === 'settings' && <SettingsPage trip={trip} setTrip={setTrip} sync={sync} />}
       </main>
 

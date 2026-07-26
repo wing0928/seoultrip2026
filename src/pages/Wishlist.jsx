@@ -1,14 +1,15 @@
-import { useState } from 'react';
-import { CheckCircle2, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import { CheckCircle2, ImagePlus, LoaderCircle, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
-import { hasCurrentGooglePhotoUrls } from '../utils/googlePlaces.js';
+import { enrichPlaceIdentity, hasCurrentGooglePhotoUrls } from '../utils/googlePlaces.js';
 import { searchMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
+import { extractPlacesFromScreenshots, screenshotPlacesToBulkText } from '../utils/screenshotPlaces.js';
 
 const emptyForm = {
   nameKo: '',
@@ -24,10 +25,10 @@ const emptyForm = {
 };
 
 const emptyBulk = { text: '', sourceUrl: '', recommendationSource: '' };
-const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '商店', '購物中心', '逛街', '拍照點', '其他'];
+const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '其他'];
 const priorities = ['必去', '想去', '有空再去'];
 
-export default function Wishlist({ wishlist, setWishlist }) {
+export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -37,6 +38,10 @@ export default function Wishlist({ wishlist, setWishlist }) {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState(emptyBulk);
   const [bulkPreview, setBulkPreview] = useState([]);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
+  const [bulkMessage, setBulkMessage] = useState('');
+  const [screenshotProgress, setScreenshotProgress] = useState(null);
+  const screenshotInputRef = useRef(null);
   const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
   const { googleDetails, googleStatus, loadGoogleDetails } = useGooglePlaceDetails(wishlist);
 
@@ -98,8 +103,69 @@ export default function Wishlist({ wishlist, setWishlist }) {
     setEditorOpen(true);
   }
 
-  function previewBulk() {
-    setBulkPreview(parseBulkPlaces(bulkForm));
+  async function previewBulk() {
+    const parsed = parseBulkPlaces(bulkForm);
+    if (!parsed.length) {
+      setBulkPreview([]);
+      setBulkMessage('請先貼上至少一個有編號的店家或景點');
+      return;
+    }
+    await resolveBulkPreview(parsed);
+  }
+
+  async function resolveBulkPreview(items) {
+    setBulkProcessing(true);
+    setBulkMessage(`正在查詢 1 / ${items.length}`);
+    const resolved = [];
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
+      setBulkMessage(`正在查詢 ${index + 1} / ${items.length}：${item.nameZh || item.nameKo}`);
+      try {
+        resolved.push(await enrichPlaceIdentity(item));
+      } catch (error) {
+        resolved.push({
+          ...item,
+          businessLookupStatus: error?.code || 'error',
+          businessLookupNote: error instanceof Error ? error.message : '商家資料查詢失敗'
+        });
+      }
+      setBulkPreview([...resolved]);
+    }
+    setBulkProcessing(false);
+    setBulkMessage('整理完成，請確認名稱、分類與查詢結果');
+  }
+
+  async function handleScreenshotSelection(event) {
+    const files = Array.from(event.target.files || []);
+    event.target.value = '';
+    if (!files.length) return;
+    setBulkProcessing(true);
+    setBulkPreview([]);
+    setBulkMessage('正在準備截圖文字辨識，第一次使用會下載語言模型');
+    try {
+      const extracted = await extractPlacesFromScreenshots(files, {
+        onProgress(progress) {
+          setScreenshotProgress(progress);
+          setBulkMessage(`辨識截圖 ${progress.current} / ${progress.total}：${progress.progress}%`);
+        }
+      });
+      if (!extracted.length) {
+        setBulkMessage('截圖內沒有辨識到可用的店名，請換一張較清楚的截圖');
+        return;
+      }
+      const screenshotText = screenshotPlacesToBulkText(extracted);
+      const nextForm = {
+        ...bulkForm,
+        text: [bulkForm.text.trim(), screenshotText].filter(Boolean).join('\n\n\n')
+      };
+      setBulkForm(nextForm);
+      setScreenshotProgress(null);
+      await resolveBulkPreview(parseBulkPlaces(nextForm));
+    } catch (error) {
+      setBulkMessage(error instanceof Error ? error.message : '截圖辨識失敗');
+    } finally {
+      setBulkProcessing(false);
+    }
   }
 
   function addBulk() {
@@ -107,12 +173,16 @@ export default function Wishlist({ wishlist, setWishlist }) {
     setWishlist((items) => [...bulkPreview, ...items]);
     setBulkForm(emptyBulk);
     setBulkPreview([]);
+    setBulkMessage('');
+    setScreenshotProgress(null);
     setBulkOpen(false);
   }
 
   function closeBulk() {
     setBulkOpen(false);
     setBulkPreview([]);
+    setBulkMessage('');
+    setScreenshotProgress(null);
   }
 
   function openGoogleDialog(item) {
@@ -131,6 +201,9 @@ export default function Wishlist({ wishlist, setWishlist }) {
         <div>
           <p className="eyebrow">Wish list</p>
           <h2>想去的地方</h2>
+          {businessRefreshStatus.state === 'loading' && (
+            <span className="toolbar-status"><LoaderCircle className="spin" size={14} /> 正在更新既有商店 {businessRefreshStatus.completed}/{businessRefreshStatus.total}</span>
+          )}
         </div>
         <div className="wishlist-toolbar-actions">
           <button className="wide-button secondary toolbar-button" onClick={openNewEditor}><Plus size={18} /> 新增景點</button>
@@ -230,6 +303,28 @@ export default function Wishlist({ wishlist, setWishlist }) {
               <button className="icon-button" onClick={closeBulk} aria-label="關閉"><X size={20} /></button>
             </div>
             <p className="soft-text">各景點間空兩行並以 1.、2.、3. 編號。整理 agent 會擷取編號後的店名、地圖連結、地區與備註。</p>
+            <div className="screenshot-import">
+              <input
+                ref={screenshotInputRef}
+                className="visually-hidden"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                multiple
+                onChange={handleScreenshotSelection}
+              />
+              <button
+                className="wide-button secondary"
+                type="button"
+                disabled={bulkProcessing}
+                onClick={() => screenshotInputRef.current?.click()}
+              >
+                {bulkProcessing && screenshotProgress
+                  ? <LoaderCircle className="spin" size={18} />
+                  : <ImagePlus size={18} />}
+                從收藏截圖整理
+              </button>
+              <p>可一次選擇最多 8 張；圖片只在這台裝置辨識，不會上傳保存。</p>
+            </div>
             <div className="form-grid">
               <label>推薦來源<input value={bulkForm.recommendationSource} onChange={(event) => setBulkForm((current) => ({ ...current, recommendationSource: event.target.value }))} placeholder="例如：OO 的首爾清單" /></label>
               <label>來源連結<input value={bulkForm.sourceUrl} onChange={(event) => setBulkForm((current) => ({ ...current, sourceUrl: event.target.value }))} placeholder="https://..." /></label>
@@ -238,12 +333,24 @@ export default function Wishlist({ wishlist, setWishlist }) {
             {bulkPreview.length > 0 && (
               <div className="bulk-preview">
                 <div className="bulk-preview-head"><strong>已整理 {bulkPreview.length} 個地點</strong><span>優先度可在加入後編輯</span></div>
-                <ol>{bulkPreview.map((item) => <li key={item.id}><span>{formatPlaceName(item)}</span><small>#{districtForArea(item.area).name} · {formatPlaceType(item.type)}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small></li>)}</ol>
+                <ol>
+                  {bulkPreview.map((item) => (
+                    <li key={item.id}>
+                      <span>{formatPlaceName(item)}</span>
+                      <small>#{districtForArea(item.area).name} · {formatPlaceType(item.type)}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small>
+                      {item.businessLookupStatus === 'verified' && <small className="lookup-success">已驗證同一間店，後續固定使用 Google Place ID</small>}
+                      {item.businessLookupStatus === 'simplified_fallback' && <small className="lookup-fallback">繁中未通過驗證，改用簡體：{item.nameZhSimplified}</small>}
+                      {['not_found', 'error', 'google_error'].includes(item.businessLookupStatus) && <small className="lookup-error">{item.businessLookupNote || '找不到可驗證的商家'}</small>}
+                      {item.note && <small className="lookup-description">{item.note}</small>}
+                    </li>
+                  ))}
+                </ol>
               </div>
             )}
+            {bulkMessage && <p className={`bulk-status ${bulkProcessing ? 'loading' : ''}`}>{bulkProcessing && <LoaderCircle className="spin" size={15} />}{bulkMessage}</p>}
             <div className="dialog-actions">
-              <button className="wide-button secondary" onClick={previewBulk}><Sparkles size={18} /> 整理並預覽</button>
-              <button className="wide-button" onClick={addBulk} disabled={!bulkPreview.length}><Plus size={18} /> 加入 {bulkPreview.length || ''} 個地點</button>
+              <button className="wide-button secondary" onClick={previewBulk} disabled={bulkProcessing}><Sparkles size={18} /> 整理並預覽</button>
+              <button className="wide-button" onClick={addBulk} disabled={!bulkPreview.length || bulkProcessing}><Plus size={18} /> 加入 {bulkPreview.length || ''} 個地點</button>
             </div>
           </section>
         </div>

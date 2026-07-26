@@ -22,7 +22,10 @@ const emptyStop = {
   recommendationSource: '',
   sourceUrl: '',
   naverMapUrl: '',
-  googleMapUrl: ''
+  googleMapUrl: '',
+  googlePlaceId: '',
+  lookupName: '',
+  nameZhSimplified: ''
 };
 
 const emptyDay = {
@@ -39,7 +42,7 @@ const emptyTransport = {
   note: ''
 };
 
-const typeOptions = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '商店', '購物中心', '逛街', '拍照點', '交通', '休息', '其他'];
+const typeOptions = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '交通', '休息', '其他'];
 const transportModes = ['地鐵', '公車', '步行', '計程車', 'AREX / 鐵路', '包車', '待確認'];
 const periodLabels = {
   上午: '☀️ 上午',
@@ -102,7 +105,10 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       recommendationSource: stop.recommendationSource || '',
       sourceUrl: stop.sourceUrl || '',
       naverMapUrl: stop.naverMapUrl || '',
-      googleMapUrl: stop.googleMapUrl || ''
+      googleMapUrl: stop.googleMapUrl || '',
+      googlePlaceId: stop.googlePlaceId || '',
+      lookupName: stop.lookupName || '',
+      nameZhSimplified: stop.nameZhSimplified || ''
     });
   }
 
@@ -163,7 +169,10 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       recommendationSource: item.recommendationSource || '',
       sourceUrl: item.sourceUrl || '',
       naverMapUrl: item.naverMapUrl || '',
-      googleMapUrl: item.googleMapUrl || ''
+      googleMapUrl: item.googleMapUrl || '',
+      googlePlaceId: item.googlePlaceId || '',
+      lookupName: item.lookupName || '',
+      nameZhSimplified: item.nameZhSimplified || ''
     }));
   }
 

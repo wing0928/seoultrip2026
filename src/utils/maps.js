@@ -28,7 +28,7 @@ export function placeMapUrl(place) {
   if (/(?:naver\.com|naver\.me)/i.test(place.naverMapUrl || '')) return cleanNaverSearchUrl(place.naverMapUrl);
   if (place.googleMapUrl?.includes('naver.com')) return cleanNaverSearchUrl(place.googleMapUrl);
   if (place.mapUrl?.includes('naver.com')) return cleanNaverSearchUrl(place.mapUrl);
-  return searchMapUrl(placeSearchQuery(place));
+  return searchMapUrl(naverSearchName(place));
 }
 
 export function naverMapAppUrl(place) {
@@ -48,21 +48,47 @@ function naverAppSearchQuery(place) {
   const aliasKey = Object.keys(NAVER_LINK_SEARCH_ALIASES).find((key) => naverUrl.includes(key));
   if (aliasKey) return NAVER_LINK_SEARCH_ALIASES[aliasKey];
 
-  const koreanName = String(place?.nameKo || place?.koreanName || '').trim();
-  return koreanName || placeSearchQuery(place) || '서울';
+  return naverSearchName(place) || '서울';
 }
 
 export function googleMapUrl(place) {
-  if (/(?:google\.[^/]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(place?.googleMapUrl || '')) {
-    return cleanGoogleMapUrl(place.googleMapUrl);
+  const name = placeNameQuery(place);
+  if (place?.googlePlaceId) {
+    return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(name || '首爾')}&query_place_id=${encodeURIComponent(place.googlePlaceId)}`;
   }
-  return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(placeSearchQuery(place) || '首爾')}`;
+  if (/(?:google\.[^/]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(place?.googleMapUrl || '')) {
+    return cleanGoogleMapUrl(place.googleMapUrl, place);
+  }
+  return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(name || '首爾')}`;
+}
+
+export function placeNameQuery(place) {
+  return withoutEnglishSeoul(
+    place?.lookupName ||
+    place?.nameKo ||
+    place?.koreanName ||
+    place?.nameZhSimplified ||
+    place?.name ||
+    place?.nameZh ||
+    place?.title ||
+    '首爾'
+  );
 }
 
 export function placeSearchQuery(place) {
-  const name = place?.nameKo || place?.koreanName || place?.name || place?.nameZh || place?.title || '首爾';
+  const name = placeNameQuery(place);
   const area = place?.area && !['待確認', '其他'].includes(place.area) ? ` ${place.area}` : '';
   return withoutEnglishSeoul(`${name}${area}`);
+}
+
+function naverSearchName(place) {
+  return withoutEnglishSeoul(
+    place?.nameKo ||
+    place?.koreanName ||
+    place?.nameZhSimplified ||
+    place?.lookupName ||
+    placeNameQuery(place)
+  );
 }
 
 function cleanNaverSearchUrl(url) {
@@ -83,14 +109,23 @@ function cleanNaverSearchUrl(url) {
   }
 }
 
-function cleanGoogleMapUrl(url) {
+function cleanGoogleMapUrl(url, place) {
   try {
     const parsed = new URL(url);
     const query = parsed.searchParams.get('query');
     if (!query) return url;
-    parsed.searchParams.set('query', withoutEnglishSeoul(query) || '首爾');
+    let cleanedQuery = withoutEnglishSeoul(query);
+    const area = String(place?.area || '').trim();
+    if (area && !['待確認', '其他'].includes(area)) {
+      cleanedQuery = cleanedQuery.replace(new RegExp(`\\s*${escapeRegExp(area)}\\s*$`), '').trim();
+    }
+    parsed.searchParams.set('query', cleanedQuery || placeNameQuery(place) || '首爾');
     return parsed.toString();
   } catch {
     return url.replace(/(?:%2520|%20|\+|\s)*Seoul/gi, '');
   }
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

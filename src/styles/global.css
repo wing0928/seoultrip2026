@@ -1515,6 +1515,49 @@ textarea {
   margin-top: 18px;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toolbar-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.screenshot-import {
+  display: grid;
+  grid-template-columns: minmax(190px, 260px) 1fr;
+  align-items: center;
+  gap: 10px 14px;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px dashed #abcbdc;
+  border-radius: 8px;
+  background: #f3f8fa;
+}
+
+.screenshot-import .wide-button {
+  min-height: 42px;
+}
+
+.screenshot-import p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
 .area-fieldset {
   min-width: 0;
   margin: 0;
@@ -1582,6 +1625,40 @@ textarea {
 .bulk-preview li span,
 .bulk-preview li small {
   display: block;
+}
+
+.bulk-preview .lookup-success {
+  color: #24704b;
+}
+
+.bulk-preview .lookup-fallback {
+  color: #8a6200;
+}
+
+.bulk-preview .lookup-error {
+  color: #b34a45;
+}
+
+.bulk-preview .lookup-description {
+  display: -webkit-box;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--ink);
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bulk-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border-radius: 6px;
+  background: #eef6f9;
+  color: var(--blue-dark);
+  font-size: 0.82rem;
 }
 
 .dialog-actions {
@@ -1668,6 +1745,10 @@ textarea {
 }
 
 @media (max-width: 560px) {
+  .screenshot-import {
+    grid-template-columns: 1fr;
+  }
+
   .sync-join-grid {
     grid-template-columns: 1fr;
   }

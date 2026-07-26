@@ -12,7 +12,8 @@ const TYPE_RULES = [
   ['咖啡廳', /咖啡|coffee|cafe|카페/i],
   ['小吃', /小吃|點心|甜點|餅|snack|디저트|분식/i],
   ['購物中心', /百貨|商場|mall|department/i],
-  ['商店', /商店|選物|服飾|品牌|shop|store|스토어/i]
+  ['男裝', /男裝|男士|男生|mens?\b|남성|남자/i],
+  ['女裝', /女裝|女士|女生|womens?\b|여성|여자/i]
 ];
 
 const NUMBERED_LINE = /^\s*\d+[.)、．]\s*/;
@@ -79,10 +80,13 @@ function makePlace(entry, sourceUrl, recommendationSource) {
     .join('\n');
   const area = AREA_ALIASES.find(([, aliases]) => aliases.some((alias) => entry.includes(alias)))?.[0] || '其他';
   const type = inferPlaceType(note, placeName, recommendationSource);
+  const nameZh = koreanMatch && /[\u3400-\u9fff]/.test(placeName)
+    ? placeName.replace(koreanMatch, '').replace(/^[\s|｜/·-]+|[\s|｜/·-]+$/g, '').trim()
+    : placeName;
   const place = {
     id: crypto.randomUUID(),
     name: '',
-    nameZh: placeName,
+    nameZh,
     nameKo: koreanMatch,
     type,
     area,
@@ -91,6 +95,7 @@ function makePlace(entry, sourceUrl, recommendationSource) {
     naverMapUrl,
     googleMapUrl,
     bulkImported: true,
+    createdAt: new Date().toISOString(),
     note,
     priority: '想去',
     visited: false
