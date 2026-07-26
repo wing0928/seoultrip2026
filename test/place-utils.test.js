@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
-import { googleMapUrl } from '../src/utils/maps.js';
+import { googleMapEmbedUrl, googleMapUrl } from '../src/utils/maps.js';
 import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
 
 test('Google Maps search uses only the resolved place name', () => {
@@ -23,6 +23,25 @@ test('Google Maps link uses the saved Place ID without the district', () => {
   }));
   assert.equal(url.searchParams.get('query'), '몽탄');
   assert.equal(url.searchParams.get('query_place_id'), 'ChIJ-example');
+});
+
+test('Google Maps embed uses Place ID and never appends the district', () => {
+  const officialUrl = new URL(googleMapEmbedUrl({
+    nameZh: '夢炭',
+    nameKo: '몽탄',
+    area: '東大門',
+    googlePlaceId: 'ChIJ-example'
+  }, 'browser-key'));
+  assert.equal(officialUrl.searchParams.get('q'), 'place_id:ChIJ-example');
+  assert.equal(officialUrl.searchParams.get('region'), 'KR');
+
+  const fallbackUrl = new URL(googleMapEmbedUrl({
+    nameZh: '夢炭',
+    nameKo: '몽탄',
+    area: '東大門'
+  }));
+  assert.equal(fallbackUrl.searchParams.get('q'), '몽탄');
+  assert.doesNotMatch(fallbackUrl.searchParams.get('q'), /東大門/);
 });
 
 test('bulk parser separates Korean and Chinese names', () => {
@@ -51,6 +70,13 @@ test('bulk parser applies a selected district to every place', () => {
 
   assert.equal(places.length, 2);
   assert.deepEqual(places.map((place) => place.area), ['弘大商圈', '弘大商圈']);
+});
+
+test('bulk parser recognizes Dongdaemun aliases', () => {
+  const [place] = parseBulkPlaces({
+    text: '1. 동대문 의류 상가\nDDP 附近'
+  });
+  assert.equal(place.area, '東大門');
 });
 
 test('screenshot parser prefers a labelled store name and keeps a short description', () => {

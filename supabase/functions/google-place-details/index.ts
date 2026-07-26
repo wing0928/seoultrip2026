@@ -7,6 +7,7 @@ const AREA_CENTERS = [
   { pattern: /弘大|延南|hongdae|yeonnam/i, center: { latitude: 37.5563, longitude: 126.922 } },
   { pattern: /北村|景福宮|三清洞|安國|bukchon|gyeongbokgung|samcheong|anguk/i, center: { latitude: 37.5796, longitude: 126.977 } },
   { pattern: /明洞|myeongdong/i, center: { latitude: 37.5636, longitude: 126.9869 } },
+  { pattern: /東大門|동대문|dongdaemun|DDP/i, center: { latitude: 37.567, longitude: 127.0095 } },
   { pattern: /聖水|首爾林|seongsu|seoul forest/i, center: { latitude: 37.5445, longitude: 127.056 } }
 ];
 const toSimplified = OpenCC.Converter({ from: 'tw', to: 'cn' });

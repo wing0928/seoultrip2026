@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { CalendarDays, Heart, Home, ListChecks, Route, Settings } from 'lucide-react';
+import { CalendarDays, Heart, Home, ListChecks, MapPinned, Route, Settings } from 'lucide-react';
 import Dashboard from './pages/Dashboard.jsx';
 import Itinerary from './pages/Itinerary.jsx';
+import MapPage from './pages/MapPage.jsx';
 import Overview from './pages/Overview.jsx';
 import Transport from './pages/Transport.jsx';
 import Wishlist from './pages/Wishlist.jsx';
@@ -24,10 +25,11 @@ const pages = [
   { id: 'itinerary', label: '行程', icon: CalendarDays },
   { id: 'transport', label: '交通', icon: Route },
   { id: 'wishlist', label: '願望', icon: Heart },
+  { id: 'map', label: '地圖', icon: MapPinned },
   { id: 'settings', label: '設定', icon: Settings }
 ];
 
-const bottomPages = ['dashboard', 'overview', 'itinerary', 'wishlist', 'settings'];
+const bottomPages = ['dashboard', 'overview', 'itinerary', 'wishlist', 'map', 'settings'];
 
 export default function App() {
   const [activePage, setActivePage] = useState('dashboard');
@@ -78,6 +80,7 @@ export default function App() {
         {activePage === 'itinerary' && <Itinerary trip={trip} itinerary={itinerary} setItinerary={setItinerary} wishlist={wishlist} />}
         {activePage === 'transport' && <Transport trip={trip} itinerary={itinerary} />}
         {activePage === 'wishlist' && <Wishlist wishlist={wishlist} setWishlist={setWishlist} businessRefreshStatus={businessRefreshStatus} />}
+        {activePage === 'map' && <MapPage wishlist={wishlist} />}
         {activePage === 'settings' && <SettingsPage trip={trip} setTrip={setTrip} sync={sync} />}
       </main>
 

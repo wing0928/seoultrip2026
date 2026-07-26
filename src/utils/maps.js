@@ -62,6 +62,15 @@ export function googleMapUrl(place) {
   return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(name || '首爾')}`;
 }
 
+export function googleMapEmbedUrl(place, apiKey = '') {
+  const name = placeNameQuery(place) || '首爾';
+  if (apiKey) {
+    const query = place?.googlePlaceId ? `place_id:${place.googlePlaceId}` : name;
+    return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&language=zh-TW&region=KR`;
+  }
+  return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=15&output=embed&hl=zh-TW`;
+}
+
 export function placeNameQuery(place) {
   return withoutEnglishSeoul(
     place?.lookupName ||
