@@ -36,11 +36,8 @@ export default function useBusinessIdentityRefresh(wishlist, setWishlist, { enab
         updated = {
           ...item,
           type: item.type === '商店' ? inferLegacyShopType(item) : item.type,
-          googlePlaceId: '',
-          googleMapUrl: '',
-          googleDetailsEligible: false,
-          businessLookupVersion: BUSINESS_LOOKUP_VERSION,
-          needsBusinessLookup: false,
+          businessLookupVersion: item.businessLookupVersion || 0,
+          needsBusinessLookup: true,
           businessLookupStatus: error?.code || 'error',
           businessLookupNote: error instanceof Error ? error.message : '商家資料更新失敗',
           businessLookupAt: new Date().toISOString()

@@ -5,11 +5,11 @@ const FUNCTION_URL = String(
   import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL ||
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
 ).trim();
-const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v6';
+const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v7';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export const googlePlacesConfigured = Boolean(FUNCTION_URL);
-export const BUSINESS_LOOKUP_VERSION = 6;
+export const BUSINESS_LOOKUP_VERSION = 7;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
@@ -28,18 +28,20 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
     return cached.data;
   }
 
-  const payload = await callGooglePlaces({
-    action: 'details',
-    query,
-    placeId: place.googlePlaceId || '',
-    type: place.type || '',
-    note: place.note || '',
-    area: place.area || ''
-  });
-  if (!payload.place) throw new GooglePlacesError('not_found', 'Google 找不到相符店家');
+  const data = place.googlePlaceId
+    ? (await callGooglePlaces({
+        action: 'details',
+        query,
+        placeId: place.googlePlaceId,
+        type: place.type || '',
+        note: place.note || '',
+        area: place.area || ''
+      })).place
+    : (await resolvePlaceIdentity(place)).place;
+  if (!data) throw new GooglePlacesError('not_found', 'Google 找不到相符店家');
 
-  writeCache(cacheId, payload.place);
-  return payload.place;
+  writeCache(cacheId, data);
+  return data;
 }
 
 export async function resolvePlaceIdentity(place) {
@@ -72,13 +74,13 @@ export async function enrichPlaceIdentity(place) {
     nameKo: resolution.nameKo || place.nameKo || '',
     nameZhSimplified: resolution.nameZhSimplified || '',
     lookupName,
-    googlePlaceId: acceptedPlace ? resolution.googlePlaceId : '',
-    googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : '',
+    googlePlaceId: acceptedPlace ? resolution.googlePlaceId : (place.googlePlaceId || ''),
+    googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : (place.googleMapUrl || ''),
     naverMapUrl: preservedNaverUrl(place) || searchMapUrl(lookupName),
     type: resolution.type || normalizeLegacyShopType(place),
-    googleDetailsEligible: resolution.reviewEligible === true,
-    businessLookupVersion: BUSINESS_LOOKUP_VERSION,
-    needsBusinessLookup: false,
+    googleDetailsEligible: acceptedPlace ? resolution.reviewEligible === true : place.googleDetailsEligible === true,
+    businessLookupVersion: acceptedPlace ? BUSINESS_LOOKUP_VERSION : (place.businessLookupVersion || 0),
+    needsBusinessLookup: !acceptedPlace,
     businessLookupStatus: resolution.status,
     businessLookupNote: resolution.message || '',
     businessLookupAt: new Date().toISOString()
@@ -86,8 +88,9 @@ export async function enrichPlaceIdentity(place) {
 }
 
 export function needsBusinessIdentityRefresh(place) {
-  if (!place || place.businessLookupVersion >= BUSINESS_LOOKUP_VERSION) return false;
-  return [2, 3, 4, 5].includes(place.businessLookupVersion) || place.type === '商店' || place.needsBusinessLookup === true;
+  if (!place || !supportsGoogleDetails(place)) return false;
+  if (place.needsBusinessLookup === true) return true;
+  return Number(place.businessLookupVersion || 0) < BUSINESS_LOOKUP_VERSION;
 }
 
 export class GooglePlacesError extends Error {
