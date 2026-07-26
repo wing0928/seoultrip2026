@@ -19,6 +19,10 @@ export function loadGoogleMaps() {
     const callbackName = '__seoulTripGoogleMapsReady';
     const existing = document.getElementById('seoul-trip-google-maps');
 
+    window.gm_authFailure = () => {
+      window.dispatchEvent(new Event('google-maps-auth-failure'));
+    };
+
     window[callbackName] = () => {
       delete window[callbackName];
       resolve(window.google.maps);

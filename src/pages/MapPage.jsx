@@ -57,6 +57,19 @@ export default function MapPage({ wishlist = [] }) {
   }, [selectedId, visiblePlaces]);
 
   useEffect(() => {
+    const handleAuthFailure = () => {
+      clearMarkers(markersRef);
+      setMapStatus({
+        state: 'error',
+        markerCount: 0,
+        message: 'Google 多景點地圖尚未啟用，已改用單點地圖'
+      });
+    };
+    window.addEventListener('google-maps-auth-failure', handleAuthFailure);
+    return () => window.removeEventListener('google-maps-auth-failure', handleAuthFailure);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function drawMap() {
@@ -109,20 +122,20 @@ export default function MapPage({ wishlist = [] }) {
           const pin = new PinElement({
             background: selectedDistrict.color,
             borderColor: selectedDistrict.activeColor,
-            glyph: placeTypeEmoji(place.type),
+            glyphText: placeTypeEmoji(place.type),
             scale: 0.92
           });
           const marker = new AdvancedMarkerElement({
             map,
             position,
             title: formatPlaceName(place),
-            content: pin.element,
+            content: pin,
             gmpClickable: true
           });
-          marker.addListener('click', () => setSelectedId(place.id));
+          marker.addEventListener('gmp-click', () => setSelectedId(place.id));
           bounds.extend(position);
           nextLocations.set(place.id, position);
-          nextMarkerElements.set(place.id, pin.element);
+          nextMarkerElements.set(place.id, pin);
           return marker;
         }).filter(Boolean);
 
