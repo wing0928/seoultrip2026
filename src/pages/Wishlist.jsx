@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { CheckCircle2, ImagePlus, LoaderCircle, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
-import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import { districtForArea, districts } from '../data/districts.js';
@@ -34,7 +33,6 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
   const [editorOpen, setEditorOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState('全部');
   const [areaFilter, setAreaFilter] = useState('全部');
-  const [selectedDistrictId, setSelectedDistrictId] = useState('myeongdong');
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState(emptyBulk);
   const [bulkPreview, setBulkPreview] = useState([]);
@@ -55,13 +53,11 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
 
   function selectFormArea(district) {
     updateField('area', district.name);
-    setSelectedDistrictId(district.id);
   }
 
   function openNewEditor() {
     setEditingId(null);
     setForm(emptyForm);
-    setSelectedDistrictId('other');
     setEditorOpen(true);
   }
 
@@ -99,7 +95,6 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
       nameZh: item.nameZh || item.chineseName || item.name || '',
       naverMapUrl: /(?:naver\.com|naver\.me)/i.test(item.naverMapUrl || '') ? item.naverMapUrl : (item.mapUrl?.includes('naver.com') ? item.mapUrl : '')
     });
-    setSelectedDistrictId(district.id);
     setEditorOpen(true);
   }
 
@@ -202,8 +197,6 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
 
   return (
     <div className="stack">
-      <DistrictExplorer selectedId={selectedDistrictId} onSelect={setSelectedDistrictId} />
-
       <div className="wishlist-toolbar">
         <div>
           <p className="eyebrow">Wish list</p>
@@ -235,7 +228,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               className={areaFilter === district.name ? 'active' : ''}
               style={{ '--filter-color': district.color }}
               aria-pressed={areaFilter === district.name}
-              onClick={() => { setAreaFilter(district.name); setSelectedDistrictId(district.id); }}
+              onClick={() => setAreaFilter(district.name)}
             >
               <span />#{district.name}
             </button>
@@ -256,7 +249,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               googleStatus={status}
               showGoogleDetails
               onOpenGoogle={() => openGoogleDialog(item)}
-              onAreaSelect={(district) => setSelectedDistrictId(district.id)}
+              onAreaSelect={(district) => setAreaFilter(district.name)}
               actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => setWishlist((items) => items.filter((old) => old.id !== item.id))}><Trash2 size={17} /> 刪除</button></>}
             />
           );

@@ -904,6 +904,10 @@ textarea {
   margin-top: 16px;
 }
 
+.district-layout.map-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .district-map-wrap {
   min-width: 0;
   padding: 8px;
@@ -1039,6 +1043,14 @@ textarea {
   height: 10px;
   flex: 0 0 auto;
   border-radius: 50%;
+}
+
+.district-legend small {
+  min-width: 22px;
+  margin-left: auto;
+  color: inherit;
+  font-size: 0.68rem;
+  text-align: right;
 }
 
 .district-detail {
@@ -1262,6 +1274,16 @@ textarea {
   min-width: 0;
 }
 
+.map-type-picker {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.map-type-picker > strong {
+  font-size: 0.82rem;
+}
+
 .map-workspace {
   min-width: 0;
   display: grid;
@@ -1332,6 +1354,64 @@ textarea {
   border: 0;
   border-top: 1px solid var(--line);
   background: #e9eef0;
+}
+
+.google-map-stage {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border-top: 1px solid var(--line);
+  background: #e9eef0;
+}
+
+.google-map-stage .google-map-frame {
+  min-height: 420px;
+  border-top: 0;
+}
+
+.google-map-fallback {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  z-index: 1;
+}
+
+.map-status-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 8px;
+  padding: 24px;
+  background: rgba(239, 243, 244, 0.9);
+  color: var(--muted);
+  text-align: center;
+}
+
+.map-status-overlay.error {
+  inset: auto 12px 12px;
+  display: flex;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 253, 248, 0.94);
+  color: var(--ink);
+}
+
+.map-location-summary {
+  margin: 0;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.selected-map-marker {
+  filter: drop-shadow(0 4px 7px rgba(28, 45, 54, 0.34));
+  transform: scale(1.16);
+  transform-origin: bottom center;
 }
 
 .map-empty-state {
@@ -1965,6 +2045,10 @@ textarea {
     grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.8fr);
   }
 
+  .district-layout.map-only {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .district-legend {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -1979,6 +2063,11 @@ textarea {
   }
 
   .google-map-frame {
+    min-height: 520px;
+  }
+
+  .google-map-stage,
+  .google-map-stage .google-map-frame {
     min-height: 520px;
   }
 }
@@ -2000,6 +2089,11 @@ textarea {
   }
 
   .google-map-frame {
+    min-height: 360px;
+  }
+
+  .google-map-stage,
+  .google-map-stage .google-map-frame {
     min-height: 360px;
   }
 

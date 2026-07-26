@@ -1,7 +1,7 @@
 import { MapPin } from 'lucide-react';
 import { districts } from '../data/districts.js';
 
-export default function DistrictExplorer({ selectedId = 'myeongdong', onSelect }) {
+export default function DistrictExplorer({ selectedId = 'myeongdong', onSelect, showDetails = true, counts = {} }) {
   const selected = districts.find((district) => district.id === selectedId) || districts[0];
   const mapDistricts = [...districts].sort((left, right) => Number(Boolean(right.isBase)) - Number(Boolean(left.isBase)));
   const select = (id) => onSelect?.(id);
@@ -16,7 +16,7 @@ export default function DistrictExplorer({ selectedId = 'myeongdong', onSelect }
         <p>選取地區，快速查看街區特色與推薦景點。</p>
       </div>
 
-      <div className="district-layout">
+      <div className={`district-layout ${showDetails ? '' : 'map-only'}`}>
         <div className="district-map-wrap">
           <svg className="district-map" viewBox="0 0 500 260" role="img" aria-label="首爾旅遊地區分區線圖">
             {mapDistricts.map((district) => {
@@ -51,19 +51,20 @@ export default function DistrictExplorer({ selectedId = 'myeongdong', onSelect }
             {districts.map((district) => (
               <button key={district.id} className={`${district.id === selectedId ? 'active' : ''} ${district.isBase ? 'legend-other' : ''}`} onClick={() => select(district.id)}>
                 <span style={{ background: district.color }} />#{district.name}
+                {Number.isFinite(counts[district.id]) && <small>{counts[district.id]}</small>}
               </button>
             ))}
           </div>
         </div>
 
-        <article className="district-detail" style={{ '--district-color': selected.color }} aria-live="polite">
+        {showDetails && <article className="district-detail" style={{ '--district-color': selected.color }} aria-live="polite">
           <p className="meta"><MapPin size={15} /> {selected.position}</p>
           <h3>{selected.name}</h3>
           <p className="name-subtitle">{selected.nameKo}</p>
           <p>{selected.character}</p>
           <h4>推薦景點</h4>
           <ul>{selected.spots.map((spot) => <li key={spot}>{spot}</li>)}</ul>
-        </article>
+        </article>}
       </div>
     </section>
   );

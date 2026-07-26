@@ -39,6 +39,13 @@ const DETAIL_FIELDS = [
   'reviewSummary'
 ].join(',');
 
+const MAP_LOCATION_FIELDS = [
+  'id',
+  'displayName',
+  'location',
+  'googleMapsUri'
+].join(',');
+
 type GooglePlace = Record<string, any>;
 
 function corsHeaders(request: Request) {
@@ -71,6 +78,7 @@ Deno.serve(async (request) => {
     const body = await request.json();
     const action = String(body?.action || 'details');
     if (action === 'resolve') return resolveIdentity(body, apiKey, request, cors);
+    if (action === 'locations') return mapLocations(body, apiKey, cors);
     if (action !== 'details') return json({ code: 'invalid_action', error: '不支援的查詢操作' }, 400, cors);
 
     const placeId = cleanPlaceId(body?.placeId);
@@ -97,6 +105,75 @@ Deno.serve(async (request) => {
     }, 500, cors);
   }
 });
+
+async function mapLocations(
+  body: Record<string, unknown>,
+  apiKey: string,
+  cors: Record<string, string>
+) {
+  const rawItems = Array.isArray(body?.items) ? body.items.slice(0, 50) : [];
+  const items = rawItems.map((item: Record<string, unknown>) => ({
+    id: cleanQuery(item?.id),
+    placeId: cleanPlaceId(item?.placeId),
+    query: cleanQuery(item?.query),
+    area: cleanQuery(item?.area)
+  })).filter((item) => item.id && (item.placeId || item.query));
+
+  if (!items.length) {
+    return json({ code: 'invalid_items', error: '缺少可查詢的地點' }, 400, cors);
+  }
+
+  const locations: Record<string, unknown>[] = [];
+  const errors: Record<string, string>[] = [];
+  for (let offset = 0; offset < items.length; offset += 5) {
+    const batch = items.slice(offset, offset + 5);
+    const results = await Promise.all(batch.map(async (item) => {
+      try {
+        let place: GooglePlace | null = null;
+        if (item.placeId) {
+          try {
+            place = await fetchPlaceMapLocation(item.placeId, 'zh-TW', apiKey);
+          } catch (error) {
+            if (!(error instanceof GoogleApiError) || error.code !== 'not_found') throw error;
+          }
+        }
+        if (!place && item.query) {
+          place = (await searchPlaces(item.query, 'zh-TW', apiKey, 1, item.area))[0] || null;
+        }
+
+        const latitude = Number(place?.location?.latitude);
+        const longitude = Number(place?.location?.longitude);
+        if (!place || !Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+          return { error: { id: item.id, code: 'not_found' } };
+        }
+        return {
+          location: {
+            id: item.id,
+            placeId: place.id || item.placeId,
+            displayName: place.displayName?.text || item.query,
+            latitude,
+            longitude,
+            googleMapsUri: place.googleMapsUri || ''
+          }
+        };
+      } catch (error) {
+        return {
+          error: {
+            id: item.id,
+            code: error instanceof GoogleApiError ? error.code : 'request_failed'
+          }
+        };
+      }
+    }));
+
+    results.forEach((result) => {
+      if (result.location) locations.push(result.location);
+      if (result.error) errors.push(result.error);
+    });
+  }
+
+  return json({ locations, errors }, 200, cors);
+}
 
 async function resolveIdentity(
   body: Record<string, unknown>,
@@ -236,6 +313,22 @@ async function fetchPlaceDetails(placeId: string, languageCode: string, apiKey: 
       'Content-Type': 'application/json',
       'X-Goog-Api-Key': apiKey,
       'X-Goog-FieldMask': DETAIL_FIELDS
+    }
+  });
+  const payload = await response.json();
+  if (!response.ok) throw googleError(payload, response.status);
+  return payload || null;
+}
+
+async function fetchPlaceMapLocation(placeId: string, languageCode: string, apiKey: string) {
+  const url = new URL(`${GOOGLE_PLACES_DETAIL_URL}/${encodeURIComponent(placeId)}`);
+  url.searchParams.set('languageCode', languageCode);
+  url.searchParams.set('regionCode', 'KR');
+  const response = await fetch(url, {
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': MAP_LOCATION_FIELDS
     }
   });
   const payload = await response.json();

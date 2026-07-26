@@ -6,7 +6,9 @@ const FUNCTION_URL = String(
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
 ).trim();
 const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v7';
+const MAP_CACHE_KEY = 'seoul-trip-2026:google-map-locations-v1';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
+const MAP_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export const googlePlacesConfigured = Boolean(FUNCTION_URL);
 export const BUSINESS_LOOKUP_VERSION = 7;
@@ -42,6 +44,58 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
 
   writeCache(cacheId, data);
   return data;
+}
+
+export async function getGoogleMapLocations(places, { refresh = false } = {}) {
+  if (!googlePlacesConfigured) {
+    throw new GooglePlacesError('not_configured', 'Google Places 尚未連線');
+  }
+
+  const cache = readStorageCache(MAP_CACHE_KEY);
+  const locations = [];
+  const missing = [];
+  (places || []).forEach((place) => {
+    const cacheId = mapLocationCacheId(place);
+    const cached = cache[cacheId];
+    if (!refresh && cached && Date.now() - cached.savedAt < MAP_CACHE_TTL) {
+      locations.push({ ...cached.data, id: place.id });
+    } else {
+      missing.push({
+        id: place.id,
+        placeId: place.googlePlaceId || '',
+        query: placeNameQuery(place),
+        area: place.area || '',
+        cacheId
+      });
+    }
+  });
+
+  for (let offset = 0; offset < missing.length; offset += 40) {
+    const batch = missing.slice(offset, offset + 40);
+    const payload = await callGooglePlaces({
+      action: 'locations',
+      items: batch.map(({ id, placeId, query, area }) => ({ id, placeId, query, area }))
+    });
+    const byId = new Map(batch.map((item) => [item.id, item]));
+    (payload.locations || []).forEach((location) => {
+      const request = byId.get(location.id);
+      if (!request) return;
+      const data = {
+        placeId: location.placeId || request.placeId,
+        displayName: location.displayName || request.query,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        googleMapsUri: location.googleMapsUri || ''
+      };
+      if (!Number.isFinite(data.latitude) || !Number.isFinite(data.longitude)) return;
+      cache[request.cacheId] = { savedAt: Date.now(), data };
+      locations.push({ ...data, id: request.id });
+    });
+  }
+
+  writeStorageCache(MAP_CACHE_KEY, cache);
+  const order = new Map((places || []).map((place, index) => [place.id, index]));
+  return locations.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
 }
 
 export async function resolvePlaceIdentity(place) {
@@ -128,8 +182,12 @@ function preservedNaverUrl(place) {
 }
 
 function readCache() {
+  return readStorageCache(CACHE_KEY);
+}
+
+function readStorageCache(key) {
   try {
-    return JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    return JSON.parse(localStorage.getItem(key) || '{}');
   } catch {
     return {};
   }
@@ -143,6 +201,18 @@ function writeCache(query, data) {
   } catch {
     // A failed cache write should not hide a valid Places response.
   }
+}
+
+function writeStorageCache(key, cache) {
+  try {
+    localStorage.setItem(key, JSON.stringify(cache));
+  } catch {
+    // Map data can always be requested again.
+  }
+}
+
+function mapLocationCacheId(place) {
+  return `${place?.googlePlaceId || placeNameQuery(place)}|${place?.area || ''}`;
 }
 
 export function hasCurrentGooglePhotoUrls(data) {

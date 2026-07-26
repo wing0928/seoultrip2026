@@ -1,19 +1,53 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ExternalLink, MapPin } from 'lucide-react';
+import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { districtForArea, districts } from '../data/districts.js';
+import { getGoogleMapLocations } from '../utils/googlePlaces.js';
+import {
+  googleMapsBrowserApiKey,
+  googleMapsMapId,
+  loadGoogleMaps
+} from '../utils/googleMapsLoader.js';
 import { googleMapEmbedUrl, googleMapUrl } from '../utils/maps.js';
-import { formatPlaceName, formatPlaceType } from '../utils/placePresentation.js';
+import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
-const embedApiKey = String(import.meta.env.VITE_GOOGLE_MAPS_EMBED_API_KEY || '').trim();
+const TYPE_ORDER = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '其他'];
 
 export default function MapPage({ wishlist = [] }) {
-  const [areaFilter, setAreaFilter] = useState('全部');
+  const [selectedDistrictId, setSelectedDistrictId] = useState('myeongdong');
+  const [typeFilter, setTypeFilter] = useState('全部');
   const [selectedId, setSelectedId] = useState('');
+  const [mapStatus, setMapStatus] = useState({ state: 'idle', markerCount: 0, message: '' });
+  const mapNodeRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersRef = useRef([]);
+  const markerElementsRef = useRef(new Map());
+  const locationByIdRef = useRef(new Map());
+
+  const selectedDistrict = districts.find((district) => district.id === selectedDistrictId) || districts[0];
+  const districtCounts = useMemo(() => Object.fromEntries(
+    districts.map((district) => [
+      district.id,
+      wishlist.filter((place) => districtForArea(place.area).id === district.id).length
+    ])
+  ), [wishlist]);
+  const districtPlaces = useMemo(() => (
+    wishlist.filter((place) => districtForArea(place.area).id === selectedDistrict.id)
+  ), [selectedDistrict.id, wishlist]);
+  const availableTypes = useMemo(() => {
+    const present = new Set(districtPlaces.map((place) => place.type || '其他'));
+    return [
+      ...TYPE_ORDER.filter((type) => present.has(type)),
+      ...Array.from(present).filter((type) => !TYPE_ORDER.includes(type))
+    ];
+  }, [districtPlaces]);
   const visiblePlaces = useMemo(() => (
-    wishlist.filter((place) => (
-      areaFilter === '全部' || districtForArea(place.area).name === areaFilter
-    ))
-  ), [areaFilter, wishlist]);
+    districtPlaces.filter((place) => typeFilter === '全部' || (place.type || '其他') === typeFilter)
+  ), [districtPlaces, typeFilter]);
+
+  useEffect(() => {
+    if (typeFilter !== '全部' && !availableTypes.includes(typeFilter)) setTypeFilter('全部');
+  }, [availableTypes, typeFilter]);
 
   useEffect(() => {
     if (!visiblePlaces.some((place) => place.id === selectedId)) {
@@ -21,98 +55,238 @@ export default function MapPage({ wishlist = [] }) {
     }
   }, [selectedId, visiblePlaces]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function drawMap() {
+      clearMarkers(markersRef);
+      markerElementsRef.current = new Map();
+      locationByIdRef.current = new Map();
+
+      if (!visiblePlaces.length) {
+        setMapStatus({ state: 'empty', markerCount: 0, message: '' });
+        return;
+      }
+      if (!googleMapsBrowserApiKey || !mapNodeRef.current) {
+        setMapStatus({ state: 'fallback', markerCount: 0, message: '' });
+        return;
+      }
+
+      setMapStatus({ state: 'loading', markerCount: 0, message: '正在載入地圖景點' });
+      try {
+        const [maps, locations] = await Promise.all([
+          loadGoogleMaps(),
+          getGoogleMapLocations(visiblePlaces)
+        ]);
+        const [{ Map: GoogleMap }, { AdvancedMarkerElement, PinElement }] = await Promise.all([
+          maps.importLibrary('maps'),
+          maps.importLibrary('marker')
+        ]);
+        if (cancelled || !mapNodeRef.current) return;
+
+        if (!mapInstanceRef.current) {
+          mapInstanceRef.current = new GoogleMap(mapNodeRef.current, {
+            center: selectedDistrict.center,
+            zoom: 13,
+            mapId: googleMapsMapId,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            streetViewControl: false,
+            clickableIcons: false
+          });
+        }
+
+        const map = mapInstanceRef.current;
+        const bounds = new maps.LatLngBounds();
+        const placeById = new Map(visiblePlaces.map((place) => [place.id, place]));
+        const nextLocations = new Map();
+        const nextMarkerElements = new Map();
+        const markers = locations.map((location) => {
+          const place = placeById.get(location.id);
+          if (!place) return null;
+          const position = { lat: location.latitude, lng: location.longitude };
+          const pin = new PinElement({
+            background: selectedDistrict.color,
+            borderColor: selectedDistrict.activeColor,
+            glyph: placeTypeEmoji(place.type),
+            scale: 0.92
+          });
+          const marker = new AdvancedMarkerElement({
+            map,
+            position,
+            title: formatPlaceName(place),
+            content: pin.element,
+            gmpClickable: true
+          });
+          marker.addListener('click', () => setSelectedId(place.id));
+          bounds.extend(position);
+          nextLocations.set(place.id, position);
+          nextMarkerElements.set(place.id, pin.element);
+          return marker;
+        }).filter(Boolean);
+
+        markersRef.current = markers;
+        markerElementsRef.current = nextMarkerElements;
+        locationByIdRef.current = nextLocations;
+        if (markers.length === 1) {
+          map.setCenter({ lat: locations[0].latitude, lng: locations[0].longitude });
+          map.setZoom(16);
+        } else if (markers.length > 1) {
+          map.fitBounds(bounds, 54);
+        } else {
+          map.setCenter(selectedDistrict.center);
+          map.setZoom(13);
+        }
+        setMapStatus({
+          state: 'ready',
+          markerCount: markers.length,
+          message: markers.length < visiblePlaces.length ? `${markers.length} / ${visiblePlaces.length} 個地點已定位` : ''
+        });
+      } catch (error) {
+        if (!cancelled) {
+          setMapStatus({
+            state: 'error',
+            markerCount: 0,
+            message: error instanceof Error ? error.message : 'Google 地圖載入失敗'
+          });
+        }
+      }
+    }
+
+    drawMap();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedDistrict, visiblePlaces]);
+
+  useEffect(() => {
+    markerElementsRef.current.forEach((element, id) => {
+      element.classList.toggle('selected-map-marker', id === selectedId);
+    });
+    const position = locationByIdRef.current.get(selectedId);
+    if (position && mapInstanceRef.current) mapInstanceRef.current.panTo(position);
+  }, [mapStatus.state, selectedId]);
+
   const selectedPlace = visiblePlaces.find((place) => place.id === selectedId) || visiblePlaces[0] || null;
-  const selectedDistrict = selectedPlace ? districtForArea(selectedPlace.area) : null;
+
+  function selectDistrict(id) {
+    setSelectedDistrictId(id);
+    setTypeFilter('全部');
+    setSelectedId('');
+  }
 
   return (
     <div className="stack map-page">
+      <DistrictExplorer
+        selectedId={selectedDistrictId}
+        onSelect={selectDistrict}
+        showDetails={false}
+        counts={districtCounts}
+      />
+
       <section className="map-toolbar" aria-labelledby="wishlist-map-title">
         <div>
-          <p className="eyebrow">Wishlist map</p>
-          <h2 id="wishlist-map-title">願望清單地圖</h2>
+          <p className="eyebrow">Google Maps</p>
+          <h2 id="wishlist-map-title">#{selectedDistrict.name}願望地圖</h2>
           <p>{visiblePlaces.length} 個地點</p>
         </div>
-        <div className="filter-scroll-track district-filter-track" role="group" aria-label="依地區篩選地圖景點">
-          <button type="button" className={areaFilter === '全部' ? 'active' : ''} onClick={() => setAreaFilter('全部')}>
-            全部地區
-          </button>
-          {districts.map((district) => (
-            <button
-              key={district.id}
-              type="button"
-              className={areaFilter === district.name ? 'active' : ''}
-              style={{ '--filter-color': district.color }}
-              aria-pressed={areaFilter === district.name}
-              onClick={() => setAreaFilter(district.name)}
-            >
-              <span />#{district.name}
+        <div className="map-type-picker">
+          <strong>選取景點類型</strong>
+          <div className="filter-scroll-track" role="group" aria-label="依景點類型篩選地圖">
+            <button type="button" className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>
+              🧭 全部
             </button>
-          ))}
+            {availableTypes.map((type) => (
+              <button key={type} type="button" className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
+                {placeTypeEmoji(type)} {type}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
 
       <section className="map-workspace">
         <div className="google-map-panel">
-          {selectedPlace ? (
-            <>
-              <div className="map-selected-head">
-                <div>
-                  <p className="eyebrow">Google Maps</p>
-                  <h2>{formatPlaceName(selectedPlace)}</h2>
-                  <span style={{ '--tag-color': selectedDistrict.color }}>#{selectedDistrict.name}</span>
+          <div className="map-selected-head">
+            <div>
+              <p className="eyebrow">Google Maps</p>
+              <h2>{selectedPlace ? formatPlaceName(selectedPlace) : `#${selectedDistrict.name}`}</h2>
+              <span style={{ '--tag-color': selectedDistrict.color }}>#{selectedDistrict.name}</span>
+            </div>
+            {selectedPlace && (
+              <a className="map-external-link" href={googleMapUrl(selectedPlace)} target="_blank" rel="noreferrer">
+                <ExternalLink size={17} /> 開啟
+              </a>
+            )}
+          </div>
+
+          {visiblePlaces.length ? (
+            <div className="google-map-stage">
+              <div ref={mapNodeRef} className="google-map-frame" aria-label={`${selectedDistrict.name}願望景點 Google 地圖`} />
+              {['fallback', 'error'].includes(mapStatus.state) && selectedPlace && (
+                <iframe
+                  key={selectedPlace.id}
+                  className="google-map-frame google-map-fallback"
+                  title={`${formatPlaceName(selectedPlace)} Google Maps`}
+                  src={googleMapEmbedUrl(selectedPlace)}
+                  loading="lazy"
+                  allowFullScreen
+                  referrerPolicy="strict-origin-when-cross-origin"
+                />
+              )}
+              {['loading', 'error'].includes(mapStatus.state) && (
+                <div className={`map-status-overlay ${mapStatus.state}`}>
+                  <MapPin size={22} />
+                  <span>{mapStatus.message}</span>
                 </div>
-                <a className="map-external-link" href={googleMapUrl(selectedPlace)} target="_blank" rel="noreferrer">
-                  <ExternalLink size={17} /> 開啟
-                </a>
-              </div>
-              <iframe
-                key={selectedPlace.id}
-                className="google-map-frame"
-                title={`${formatPlaceName(selectedPlace)} Google Maps`}
-                src={googleMapEmbedUrl(selectedPlace, embedApiKey)}
-                loading="lazy"
-                allowFullScreen
-                referrerPolicy="strict-origin-when-cross-origin"
-              />
-            </>
+              )}
+            </div>
           ) : (
             <div className="map-empty-state">
               <MapPin size={28} />
-              <strong>這個地區還沒有願望景點</strong>
-              <span>新增景點後會自動顯示在這裡。</span>
+              <strong>這個條件還沒有願望景點</strong>
+              <span>可改選其他地區或景點類型。</span>
             </div>
           )}
+          {mapStatus.state === 'ready' && mapStatus.message && <p className="map-location-summary">{mapStatus.message}</p>}
         </div>
 
-        <aside className="map-place-panel" aria-label="願望清單景點">
+        <aside className="map-place-panel" aria-label={`${selectedDistrict.name}願望景點`}>
           <div className="map-place-panel-head">
-            <strong>{areaFilter === '全部' ? '全部願望' : `#${areaFilter}`}</strong>
+            <strong>{typeFilter === '全部' ? `#${selectedDistrict.name}景點` : formatPlaceType(typeFilter)}</strong>
             <span>{visiblePlaces.length}</span>
           </div>
           <div className="map-place-list">
             {visiblePlaces.map((place) => {
-              const district = districtForArea(place.area);
               const active = place.id === selectedPlace?.id;
               return (
                 <button
                   key={place.id}
                   type="button"
                   className={active ? 'active' : ''}
-                  style={{ '--place-color': district.color }}
+                  style={{ '--place-color': selectedDistrict.color }}
                   aria-pressed={active}
                   onClick={() => setSelectedId(place.id)}
                 >
                   <MapPin size={18} />
                   <span>
                     <strong>{formatPlaceName(place)}</strong>
-                    <small>{formatPlaceType(place.type)} · #{district.name}</small>
+                    <small>{formatPlaceType(place.type)}</small>
                   </span>
                 </button>
               );
             })}
+            {!visiblePlaces.length && <p className="empty">沒有符合條件的景點。</p>}
           </div>
         </aside>
       </section>
     </div>
   );
+}
+
+function clearMarkers(markersRef) {
+  markersRef.current.forEach((marker) => {
+    marker.map = null;
+  });
+  markersRef.current = [];
 }
