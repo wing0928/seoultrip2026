@@ -2,7 +2,7 @@ import { placeSearchQuery, searchMapUrl } from './maps.js';
 
 const AREA_ALIASES = [
   ['明洞', ['明洞', '명동']],
-  ['北村韓屋與景福宮', ['北村', '景福宮', '북촌', '경복궁', '三清洞']],
+  ['北村韓屋與景福宮', ['北村', '景福宮', '安國', '북촌', '경복궁', '안국', '三清洞', '종로', '율곡로', '창덕궁']],
   ['弘大商圈', ['弘大', '홍대', '延南', '연남']],
   ['聖水洞', ['聖水', '성수', '首爾林', '서울숲']]
 ];
@@ -37,7 +37,7 @@ function classifyType(text) {
 }
 
 function splitEntries(text) {
-  const normalized = String(text).replace(/\r\n?/g, '\n').trim();
+  const normalized = normalizeNumberedBullets(String(text)).replace(/\r\n?/g, '\n').trim();
   if (!normalized) return [];
 
   const lines = normalized.split('\n');
@@ -57,6 +57,17 @@ function splitEntries(text) {
   if (entries.length > 1 || NUMBERED_LINE.test(lines[0])) return entries;
 
   return normalized.split(/\n\s*\n+/).map((entry) => entry.trim()).filter(Boolean);
+}
+
+function normalizeNumberedBullets(text) {
+  const circledNumbers = '①②③④⑤⑥⑦⑧⑨⑩❶❷❸❹❺❻❼❽❾❿';
+  return String(text)
+    .replace(/([0-9])\uFE0F?\u20E3/g, '$1. ')
+    .replace(/🔟/g, '10. ')
+    .replace(/[①②③④⑤⑥⑦⑧⑨⑩❶❷❸❹❺❻❼❽❾❿]/g, (marker) => {
+      const index = circledNumbers.indexOf(marker) % 10;
+      return `${index + 1}. `;
+    });
 }
 
 function makePlace(entry, sourceUrl, recommendationSource) {

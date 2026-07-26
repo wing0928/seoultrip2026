@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
 import { googleMapUrl } from '../src/utils/maps.js';
-import { parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
+import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
 
 test('Google Maps search uses only the resolved place name', () => {
   const url = new URL(googleMapUrl({
@@ -34,6 +34,15 @@ test('bulk parser separates Korean and Chinese names', () => {
   assert.equal(place.nameZh, '江南烤腸');
 });
 
+test('bulk parser recognizes keycap emoji numbered bullets', () => {
+  const places = parseBulkPlaces({
+    text: '1️⃣ 第一間店\n第一筆備註\n\n2️⃣ 第二間店\n第二筆備註'
+  });
+  assert.equal(places.length, 2);
+  assert.equal(places[0].nameZh, '第一間店');
+  assert.equal(places[1].nameZh, '第二間店');
+});
+
 test('screenshot parser prefers a labelled store name and keeps a short description', () => {
   const place = parseScreenshotText(`
     10:42
@@ -45,4 +54,37 @@ test('screenshot parser prefers a labelled store name and keeps a short descript
   assert.equal(place.name, '漢南選物店');
   assert.match(place.description, /女裝店/);
   assert.match(screenshotPlacesToBulkText([place]), /^1\. 漢南選物店/);
+});
+
+test('screenshot parser splits OCR-damaged emoji bullets by following addresses', () => {
+  const places = parseScreenshotPlaces(`
+    [安國一日路線]
+    [매 *리와인드서울 (Rwnd Seoul)
+    후 서울 종로구 율곡로 33
+    : 33, Yulgok-ro, Jongno-gu
+    @ *무구옥 (Muguok)
+    후 서울 종로구 율곡로1길 7
+    : 7, Yulgok-ro 1-gil, Jongno-gu
+    ® *국립현대미술관 (MMCA)
+    후 서울 종로구 삼청로 30
+    : 30, Samcheong-ro, Jongno-gu
+    fi 02-3701-9500
+    빼 *오이뮤 (104)
+    투 서울 종로구 윤보선길 65
+    : 65 Yunboseon-gil, Jongno-gu
+    fll 02-743-2245
+    B® #2 (Bourbon)
+    후 서울 종로구 창덕궁1길 33
+    : 33, Changdeokgung 1-gil, Jongno-gu
+    fii 02-745-1933
+  `, '安國路線.jpg');
+
+  assert.equal(places.length, 5);
+  assert.equal(places[0].name, '리와인드서울 (Rwnd Seoul)');
+  assert.equal(places[1].name, '무구옥 (Muguok)');
+  assert.equal(places[2].name, '국립현대미술관 (MMCA)');
+  assert.equal(places[3].name, '오이뮤');
+  assert.equal(places[4].name, 'Bourbon');
+  const bulkPlaces = parseBulkPlaces({ text: screenshotPlacesToBulkText(places) });
+  assert.ok(bulkPlaces.every((place) => place.area === '北村韓屋與景福宮'));
 });

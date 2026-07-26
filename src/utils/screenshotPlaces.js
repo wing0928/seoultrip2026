@@ -32,8 +32,7 @@ export async function extractPlacesFromScreenshots(files, { onProgress } = {}) {
     for (currentImage = 0; currentImage < images.length; currentImage += 1) {
       const file = images[currentImage];
       const { data } = await worker.recognize(file);
-      const parsed = parseScreenshotText(data?.text || '', file.name);
-      if (parsed) results.push(parsed);
+      results.push(...parseScreenshotPlaces(data?.text || '', file.name));
     }
     return results;
   } finally {
@@ -42,12 +41,23 @@ export async function extractPlacesFromScreenshots(files, { onProgress } = {}) {
 }
 
 export function parseScreenshotText(text, filename = '') {
+  return parseScreenshotPlaces(text, filename)[0] || null;
+}
+
+export function parseScreenshotPlaces(text, filename = '') {
   const lines = String(text)
     .replace(/\r\n?/g, '\n')
     .split('\n')
     .map(cleanLine)
     .filter(Boolean);
-  if (!lines.length) return null;
+  if (!lines.length) return [];
+
+  const groups = splitScreenshotEntries(lines);
+  if (groups.length) {
+    const firstHeaderIndex = lines.indexOf(groups[0][0]);
+    const sharedContext = lines.slice(0, firstHeaderIndex).filter((line) => !isNoise(line)).slice(-1);
+    return groups.map((group) => parseStructuredEntry(group, filename, sharedContext)).filter(Boolean);
+  }
 
   const labelled = lines
     .map((line) => line.match(LABELLED_NAME)?.[1]?.trim())
@@ -56,10 +66,10 @@ export function parseScreenshotText(text, filename = '') {
     .map((line, index) => ({ line, index, score: scoreNameLine(line, index) }))
     .filter((item) => item.score > 0)
     .sort((left, right) => right.score - left.score)[0]?.line;
-  if (!candidate) return null;
+  if (!candidate) return [];
 
   const name = cleanCandidateName(candidate);
-  if (!name) return null;
+  if (!name) return [];
   const description = lines
     .filter((line) => line !== candidate && !isNoise(line))
     .filter((line) => line.length >= 6 && line.length <= 140)
@@ -67,11 +77,11 @@ export function parseScreenshotText(text, filename = '') {
     .join('；')
     .slice(0, 360);
 
-  return {
+  return [{
     name,
     description: description || `收藏貼文截圖：${filename || '未命名圖片'}`,
     rawText: lines.join('\n')
-  };
+  }];
 }
 
 export function screenshotPlacesToBulkText(items) {
@@ -94,6 +104,79 @@ function scoreNameLine(line, index) {
   if (/\d{3,}|[#@]|https?:\/\//i.test(line)) score -= 35;
   if (/推薦|必買|穿搭|首爾|韓國|地址|價格|營業|交通|心得|分享/.test(line)) score -= 18;
   return score;
+}
+
+function splitScreenshotEntries(lines) {
+  const headers = [];
+  lines.forEach((line, index) => {
+    const nextLine = lines[index + 1] || '';
+    if (isNumberedEmojiLine(line) || (isAddressLine(nextLine) && isLikelyHeader(line))) {
+      headers.push(index);
+    }
+  });
+  const uniqueHeaders = [...new Set(headers)].sort((left, right) => left - right);
+  if (!uniqueHeaders.length) return [];
+
+  return uniqueHeaders.map((start, index) => (
+    lines.slice(start, uniqueHeaders[index + 1] ?? lines.length)
+  )).filter((group) => group.length);
+}
+
+function parseStructuredEntry(lines, filename, sharedContext = []) {
+  const rawHeader = lines[0] || '';
+  const name = cleanStructuredName(rawHeader);
+  if (!name) return null;
+
+  const description = lines
+    .slice(1)
+    .concat(sharedContext)
+    .map(cleanDetailLine)
+    .filter((line) => line && !isNoise(line))
+    .slice(0, 4)
+    .join('；')
+    .slice(0, 360);
+
+  return {
+    name,
+    description: description || `收藏貼文截圖：${filename || '未命名圖片'}`,
+    rawText: lines.join('\n')
+  };
+}
+
+function cleanStructuredName(value) {
+  let name = String(value)
+    .replace(NUMBERED_EMOJI_PREFIX, '')
+    .replace(/^.{0,6}[*#]\s*/u, '')
+    .trim();
+  const alias = name.match(/\(([^)]+)\)\s*$/)?.[1]?.trim() || '';
+  const base = name.replace(/\([^)]+\)\s*$/, '').trim();
+  if (alias && !/[A-Za-z\u3400-\u9fff가-힣]/.test(base)) name = alias;
+  else if (alias && /^\d+$/.test(alias)) name = base;
+  return cleanCandidateName(name);
+}
+
+function cleanDetailLine(value) {
+  return String(value)
+    .replace(/^[:：]\s*/, '')
+    .replace(/^(?:📍|☎️?|[후투])\s*(?=서울|Seoul|\d{2,4}-)/i, '')
+    .replace(/^f(?:i|l){1,3}\s*(?=\d{2,4}-)/i, '')
+    .trim();
+}
+
+const NUMBERED_EMOJI_PREFIX = /^\s*(?:(?:[0-9]\uFE0F?\u20E3)|🔟|[①②③④⑤⑥⑦⑧⑨⑩❶❷❸❹❺❻❼❽❾❿]|\d+[.)、．])\s*/u;
+
+function isNumberedEmojiLine(line) {
+  return NUMBERED_EMOJI_PREFIX.test(line);
+}
+
+function isAddressLine(line) {
+  return /(?:서울|Seoul).*(?:\d|로|길|구|동)/i.test(line);
+}
+
+function isLikelyHeader(line) {
+  if (!line || isNoise(line) || isAddressLine(line)) return false;
+  if (line.length > 80 || /https?:\/\//i.test(line)) return false;
+  return /[A-Za-z\u3400-\u9fff가-힣]/.test(line);
 }
 
 function cleanCandidateName(value) {
