@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, MapPin } from 'lucide-react';
+import { ChevronDown, ExternalLink, MapPin } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { getGoogleMapLocations } from '../utils/googlePlaces.js';
@@ -8,7 +8,7 @@ import {
   googleMapsMapId,
   loadGoogleMaps
 } from '../utils/googleMapsLoader.js';
-import { googleMapEmbedUrl, googleMapUrl } from '../utils/maps.js';
+import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const TYPE_ORDER = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '其他'];
@@ -17,6 +17,7 @@ export default function MapPage({ wishlist = [] }) {
   const [selectedDistrictId, setSelectedDistrictId] = useState('myeongdong');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [selectedId, setSelectedId] = useState('');
+  const [expandedId, setExpandedId] = useState('');
   const [mapStatus, setMapStatus] = useState({ state: 'idle', markerCount: 0, message: '' });
   const mapNodeRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -173,6 +174,7 @@ export default function MapPage({ wishlist = [] }) {
     setSelectedDistrictId(id);
     setTypeFilter('全部');
     setSelectedId('');
+    setExpandedId('');
   }
 
   return (
@@ -259,21 +261,54 @@ export default function MapPage({ wishlist = [] }) {
           <div className="map-place-list">
             {visiblePlaces.map((place) => {
               const active = place.id === selectedPlace?.id;
+              const expanded = place.id === expandedId;
               return (
-                <button
+                <article
                   key={place.id}
-                  type="button"
-                  className={active ? 'active' : ''}
+                  className={`map-place-item ${active ? 'active' : ''} ${expanded ? 'expanded' : ''}`}
                   style={{ '--place-color': selectedDistrict.color }}
-                  aria-pressed={active}
-                  onClick={() => setSelectedId(place.id)}
                 >
-                  <MapPin size={18} />
-                  <span>
-                    <strong>{formatPlaceName(place)}</strong>
-                    <small>{formatPlaceType(place.type)}</small>
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    className="map-place-select"
+                    aria-pressed={active}
+                    onClick={() => setSelectedId(place.id)}
+                  >
+                    <MapPin size={18} />
+                    <span>
+                      <strong>{formatPlaceName(place)}</strong>
+                      <small>{formatPlaceType(place.type)}</small>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="map-place-toggle"
+                    aria-label={`查看 ${formatPlaceName(place)} 景點資訊`}
+                    aria-expanded={expanded}
+                    title="查看景點資訊"
+                    onClick={() => {
+                      setSelectedId(place.id);
+                      setExpandedId(expanded ? '' : place.id);
+                    }}
+                  >
+                    <ChevronDown size={19} />
+                  </button>
+                  {expanded && (
+                    <div className="map-place-details">
+                      <dl>
+                        <div><dt>優先度</dt><dd>{place.priority || '想去'}</dd></div>
+                        <div><dt>地區</dt><dd>#{selectedDistrict.name}</dd></div>
+                      </dl>
+                      {place.recommendationSource && <p><strong>推薦來源</strong>{place.recommendationSource}</p>}
+                      {place.note && <p><strong>備註</strong>{place.note}</p>}
+                      <div className="map-place-links">
+                        <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
+                        <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
+                        {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
+                      </div>
+                    </div>
+                  )}
+                </article>
               );
             })}
             {!visiblePlaces.length && <p className="empty">沒有符合條件的景點。</p>}
