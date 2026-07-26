@@ -5,11 +5,11 @@ const FUNCTION_URL = String(
   import.meta.env.VITE_GOOGLE_PLACES_FUNCTION_URL ||
   (SUPABASE_URL ? `${SUPABASE_URL}/functions/v1/google-place-details` : '')
 ).trim();
-const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v3';
+const CACHE_KEY = 'seoul-trip-2026:google-places-cache-v5';
 const CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export const googlePlacesConfigured = Boolean(FUNCTION_URL);
-export const BUSINESS_LOOKUP_VERSION = 3;
+export const BUSINESS_LOOKUP_VERSION = 5;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
@@ -33,7 +33,8 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
     query,
     placeId: place.googlePlaceId || '',
     type: place.type || '',
-    note: place.note || ''
+    note: place.note || '',
+    area: place.area || ''
   });
   if (!payload.place) throw new GooglePlacesError('not_found', 'Google 找不到相符店家');
 
@@ -55,7 +56,8 @@ export async function resolvePlaceIdentity(place) {
     nameZh: nameZh || nameKo,
     nameKo,
     type: place?.type || '',
-    note: place?.note || ''
+    note: place?.note || '',
+    area: place?.area || ''
   });
   if (!payload.resolution) throw new GooglePlacesError('not_found', 'Google 找不到相符店家');
   return payload.resolution;
@@ -64,7 +66,7 @@ export async function resolvePlaceIdentity(place) {
 export async function enrichPlaceIdentity(place) {
   const resolution = await resolvePlaceIdentity(place);
   const lookupName = resolution.nameKo || resolution.nameZhSimplified || place.nameZh || place.nameKo;
-  const acceptedPlace = ['verified', 'simplified_verified'].includes(resolution.status) && resolution.googlePlaceId;
+  const acceptedPlace = ['verified', 'simplified_verified', 'korean_verified'].includes(resolution.status) && resolution.googlePlaceId;
   return {
     ...place,
     nameKo: resolution.verified ? (resolution.nameKo || place.nameKo || '') : (place.nameKo || ''),
@@ -85,7 +87,7 @@ export async function enrichPlaceIdentity(place) {
 
 export function needsBusinessIdentityRefresh(place) {
   if (!place || place.businessLookupVersion >= BUSINESS_LOOKUP_VERSION) return false;
-  return place.businessLookupVersion === 2 || place.type === '商店' || place.needsBusinessLookup === true;
+  return [2, 3, 4].includes(place.businessLookupVersion) || place.type === '商店' || place.needsBusinessLookup === true;
 }
 
 export class GooglePlacesError extends Error {
