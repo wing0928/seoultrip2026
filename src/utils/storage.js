@@ -70,27 +70,37 @@ export function loadWishlist() {
 }
 
 export function migrateWishlist(items = []) {
-  return items.map((item) => {
+  return migrateWishlistAreas(items).map((item) => {
     const placeNames = `${item.nameZh || item.chineseName || item.name || ''} ${item.nameKo || item.koreanName || ''}`;
-    const area = (!item.area || ['其他', '待確認'].includes(item.area)) && /東大門|동대문|\bDDP\b/i.test(placeNames)
-      ? '東大門'
-      : item.area;
+    if (/東大門綜合市場|동대문종합시장/i.test(placeNames)) return item;
+
     const isBulkPlace = item.bulkImported || (
       item.note &&
       item.recommendationSource &&
       item.sourceUrl &&
       (item.naverMapUrl || item.googleMapUrl)
     );
-    if (!isBulkPlace) return area === item.area ? item : { ...item, area };
+    if (!isBulkPlace) return item;
 
     const wasLegacyShop = item.type === '商店';
     const inferredType = inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource);
     return {
       ...item,
-      area,
       type: wasLegacyShop ? inferLegacyShopType(item) : inferredType,
       needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
     };
+  });
+}
+
+export function migrateWishlistAreas(items = []) {
+  return items.map((item) => {
+    const placeNames = `${item.nameZh || item.chineseName || item.name || ''} ${item.nameKo || item.koreanName || ''}`;
+    const isDongdaemunMarket = /東大門綜合市場|동대문종합시장/i.test(placeNames);
+    const area = (!item.area || ['其他', '待確認'].includes(item.area)) && /東大門|동대문|\bDDP\b/i.test(placeNames)
+      ? '東大門'
+      : item.area;
+    const type = isDongdaemunMarket && item.type === '餐廳' ? '景點' : item.type;
+    return area === item.area && type === item.type ? item : { ...item, area, type };
   });
 }
 

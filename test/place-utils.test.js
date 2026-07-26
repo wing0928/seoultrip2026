@@ -3,7 +3,7 @@ import test from 'node:test';
 import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
 import { googleMapEmbedUrl, googleMapUrl } from '../src/utils/maps.js';
 import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
-import { migrateWishlist } from '../src/utils/storage.js';
+import { migrateWishlist, migrateWishlistAreas } from '../src/utils/storage.js';
 
 test('Google Maps search uses only the resolved place name', () => {
   const url = new URL(googleMapUrl({
@@ -81,14 +81,18 @@ test('bulk parser recognizes Dongdaemun aliases', () => {
 });
 
 test('wishlist migration moves existing Dongdaemun places out of Other', () => {
-  const [place] = migrateWishlist([{
+  const [place] = migrateWishlistAreas([{
     id: 'dongdaemun-market',
     nameZh: '東大門綜合市場',
     nameKo: '동대문종합시장',
     area: '其他',
-    type: '景點'
+    type: '餐廳'
   }]);
   assert.equal(place.area, '東大門');
+  assert.equal(place.type, '景點');
+
+  const [locallyLoadedPlace] = migrateWishlist([{ ...place, bulkImported: true, note: '市場小吃' }]);
+  assert.equal(locallyLoadedPlace.type, '景點');
 });
 
 test('screenshot parser prefers a labelled store name and keeps a short description', () => {
