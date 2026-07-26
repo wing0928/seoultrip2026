@@ -24,7 +24,7 @@ const emptyForm = {
   visited: false
 };
 
-const emptyBulk = { text: '', sourceUrl: '', recommendationSource: '' };
+const emptyBulk = { text: '', sourceUrl: '', recommendationSource: '', area: '' };
 const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '其他'];
 const priorities = ['必去', '想去', '有空再去'];
 
@@ -185,6 +185,13 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
     setScreenshotProgress(null);
   }
 
+  function clearBulkList() {
+    setBulkForm((current) => ({ ...current, text: '' }));
+    setBulkPreview([]);
+    setBulkMessage('');
+    setScreenshotProgress(null);
+  }
+
   function openGoogleDialog(item) {
     setGoogleDialogPlace(item);
     const details = googleDetails[item.id];
@@ -328,7 +335,45 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
             <div className="form-grid">
               <label>推薦來源<input value={bulkForm.recommendationSource} onChange={(event) => setBulkForm((current) => ({ ...current, recommendationSource: event.target.value }))} placeholder="例如：OO 的首爾清單" /></label>
               <label>來源連結<input value={bulkForm.sourceUrl} onChange={(event) => setBulkForm((current) => ({ ...current, sourceUrl: event.target.value }))} placeholder="https://..." /></label>
-              <label className="full">商店／景點清單<textarea className="bulk-textarea" value={bulkForm.text} onChange={(event) => setBulkForm((current) => ({ ...current, text: event.target.value }))} placeholder={'1. 능동미나리성수점\nhttps://naver.me/example\n餐點與其他備註\n\n\n2. Pizzeria Marione 마리오네\nhttps://maps.app.goo.gl/example\n其他備註'} /></label>
+              <fieldset className="area-fieldset full">
+                <legend>套用地區</legend>
+                <div className="area-tag-options">
+                  <button
+                    type="button"
+                    className={!bulkForm.area ? 'active' : ''}
+                    style={{ '--tag-color': '#2F6F91' }}
+                    onClick={() => setBulkForm((current) => ({ ...current, area: '' }))}
+                  >
+                    自動判斷
+                  </button>
+                  {districts.map((district) => (
+                    <button
+                      key={district.id}
+                      type="button"
+                      className={bulkForm.area === district.name ? 'active' : ''}
+                      style={{ '--tag-color': district.color }}
+                      onClick={() => setBulkForm((current) => ({ ...current, area: district.name }))}
+                    >
+                      #{district.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="bulk-area-help">{bulkForm.area ? `本次加入的景點會統一標示為 #${bulkForm.area}` : '依店名、地址與備註自動判斷地區'}</p>
+              </fieldset>
+              <div className="bulk-list-field full">
+                <div className="bulk-list-head">
+                  <label htmlFor="bulk-place-list">商店／景點清單</label>
+                  <button
+                    type="button"
+                    className="bulk-clear-button"
+                    onClick={clearBulkList}
+                    disabled={bulkProcessing || (!bulkForm.text && !bulkPreview.length)}
+                  >
+                    <Trash2 size={15} /> 清除
+                  </button>
+                </div>
+                <textarea id="bulk-place-list" className="bulk-textarea" value={bulkForm.text} onChange={(event) => setBulkForm((current) => ({ ...current, text: event.target.value }))} placeholder={'1. 능동미나리성수점\nhttps://naver.me/example\n餐點與其他備註\n\n\n2. Pizzeria Marione 마리오네\nhttps://maps.app.goo.gl/example\n其他備註'} />
+              </div>
             </div>
             {bulkPreview.length > 0 && (
               <div className="bulk-preview">

@@ -1593,6 +1593,47 @@ textarea {
   box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--tag-color);
 }
 
+.bulk-area-help {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.bulk-list-field {
+  display: grid;
+  gap: 6px;
+}
+
+.bulk-list-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.bulk-list-head label {
+  font-weight: 800;
+}
+
+.bulk-clear-button {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border-color: #efcdc4;
+  background: #fff5f2;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.bulk-clear-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .bulk-textarea {
   min-height: 210px;
 }

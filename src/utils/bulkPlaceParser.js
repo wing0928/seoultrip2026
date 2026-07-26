@@ -19,10 +19,11 @@ const TYPE_RULES = [
 const NUMBERED_LINE = /^\s*\d+[.)、．]\s*/;
 const URL_PATTERN = /https?:\/\/[^\s]+/gi;
 
-export function parseBulkPlaces({ text = '', sourceUrl = '', recommendationSource = '' }) {
+export function parseBulkPlaces({ text = '', sourceUrl = '', recommendationSource = '', area = '' }) {
   return splitEntries(text)
     .map((entry) => makePlace(entry, sourceUrl, recommendationSource))
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((place) => area ? { ...place, area } : place);
 }
 
 export function inferPlaceType(note = '', name = '', recommendationSource = '') {

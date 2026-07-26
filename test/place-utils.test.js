@@ -43,6 +43,16 @@ test('bulk parser recognizes keycap emoji numbered bullets', () => {
   assert.equal(places[1].nameZh, '第二間店');
 });
 
+test('bulk parser applies a selected district to every place', () => {
+  const places = parseBulkPlaces({
+    text: '1. 첫 번째 가게\n明洞附近\n\n\n2. 두 번째 가게\n聖水洞附近',
+    area: '弘大商圈'
+  });
+
+  assert.equal(places.length, 2);
+  assert.deepEqual(places.map((place) => place.area), ['弘大商圈', '弘大商圈']);
+});
+
 test('screenshot parser prefers a labelled store name and keeps a short description', () => {
   const place = parseScreenshotText(`
     10:42
