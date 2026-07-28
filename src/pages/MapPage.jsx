@@ -12,7 +12,7 @@ import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const TYPE_ORDER = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '其他'];
-const PLACE_FOCUS_ZOOM = 17;
+const PLACE_FOCUS_ZOOM = 19;
 
 export default function MapPage({ wishlist = [] }) {
   const [selectedDistrictId, setSelectedDistrictId] = useState('myeongdong');
