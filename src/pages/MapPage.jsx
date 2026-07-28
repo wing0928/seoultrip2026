@@ -12,6 +12,7 @@ import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const TYPE_ORDER = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '其他'];
+const PLACE_FOCUS_ZOOM = 17;
 
 export default function MapPage({ wishlist = [] }) {
   const [selectedDistrictId, setSelectedDistrictId] = useState('myeongdong');
@@ -142,7 +143,7 @@ export default function MapPage({ wishlist = [] }) {
             content: pin,
             gmpClickable: true
           });
-          marker.addEventListener('gmp-click', () => setSelectedId(place.id));
+          marker.addEventListener('gmp-click', () => focusPlace(place.id));
           bounds.extend(position);
           nextLocations.set(place.id, position);
           nextMarkerElements.set(place.id, pin);
@@ -199,6 +200,16 @@ export default function MapPage({ wishlist = [] }) {
     setTypeFilter('全部');
     setSelectedId('');
     setExpandedId('');
+  }
+
+  function focusPlace(id) {
+    setSelectedId(id);
+    const position = locationByIdRef.current.get(id);
+    if (position && mapInstanceRef.current) {
+      mapInstanceRef.current.panTo(position);
+      mapInstanceRef.current.setZoom(PLACE_FOCUS_ZOOM);
+    }
+    if (placeListRef.current) placeListRef.current.scrollTop = 0;
   }
 
   return (
@@ -301,7 +312,7 @@ export default function MapPage({ wishlist = [] }) {
                     type="button"
                     className="map-place-select"
                     aria-pressed={active}
-                    onClick={() => setSelectedId(place.id)}
+                    onClick={() => focusPlace(place.id)}
                   >
                     <MapPin size={18} />
                     <span>
@@ -316,7 +327,7 @@ export default function MapPage({ wishlist = [] }) {
                     aria-expanded={expanded}
                     title="查看景點資訊"
                     onClick={() => {
-                      setSelectedId(place.id);
+                      focusPlace(place.id);
                       setExpandedId(expanded ? '' : place.id);
                     }}
                   >
