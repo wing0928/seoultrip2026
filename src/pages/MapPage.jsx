@@ -20,6 +20,7 @@ export default function MapPage({ wishlist = [] }) {
   const [expandedId, setExpandedId] = useState('');
   const [mapStatus, setMapStatus] = useState({ state: 'idle', markerCount: 0, message: '' });
   const mapNodeRef = useRef(null);
+  const placeListRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
   const markerElementsRef = useRef(new Map());
@@ -45,6 +46,15 @@ export default function MapPage({ wishlist = [] }) {
   const visiblePlaces = useMemo(() => (
     districtPlaces.filter((place) => typeFilter === '全部' || (place.type || '其他') === typeFilter)
   ), [districtPlaces, typeFilter]);
+  const orderedVisiblePlaces = useMemo(() => {
+    const selectedIndex = visiblePlaces.findIndex((place) => place.id === selectedId);
+    if (selectedIndex <= 0) return visiblePlaces;
+    return [
+      visiblePlaces[selectedIndex],
+      ...visiblePlaces.slice(0, selectedIndex),
+      ...visiblePlaces.slice(selectedIndex + 1)
+    ];
+  }, [selectedId, visiblePlaces]);
 
   useEffect(() => {
     if (typeFilter !== '全部' && !availableTypes.includes(typeFilter)) setTypeFilter('全部');
@@ -179,6 +189,7 @@ export default function MapPage({ wishlist = [] }) {
     });
     const position = locationByIdRef.current.get(selectedId);
     if (position && mapInstanceRef.current) mapInstanceRef.current.panTo(position);
+    if (selectedId && placeListRef.current) placeListRef.current.scrollTop = 0;
   }, [mapStatus.state, selectedId]);
 
   const selectedPlace = visiblePlaces.find((place) => place.id === selectedId) || visiblePlaces[0] || null;
@@ -276,8 +287,8 @@ export default function MapPage({ wishlist = [] }) {
             <strong>{typeFilter === '全部' ? `#${selectedDistrict.name}景點` : formatPlaceType(typeFilter)}</strong>
             <span>{visiblePlaces.length}</span>
           </div>
-          <div className="map-place-list">
-            {visiblePlaces.map((place) => {
+          <div ref={placeListRef} className="map-place-list">
+            {orderedVisiblePlaces.map((place) => {
               const active = place.id === selectedPlace?.id;
               const expanded = place.id === expandedId;
               return (
