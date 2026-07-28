@@ -73,6 +73,14 @@ test('bulk parser applies a selected district to every place', () => {
   assert.deepEqual(places.map((place) => place.area), ['弘大商圈', '弘大商圈']);
 });
 
+test('bulk parser recognizes select shops before general clothing categories', () => {
+  const [place] = parseBulkPlaces({
+    text: '1. Getcseoul\n選品店，男女裝都很好逛'
+  });
+
+  assert.equal(place.type, '選物店');
+});
+
 test('bulk parser recognizes Dongdaemun aliases', () => {
   const [place] = parseBulkPlaces({
     text: '1. 동대문 의류 상가\nDDP 附近'

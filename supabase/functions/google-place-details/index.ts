@@ -387,6 +387,7 @@ function cleanKoreanDisplayName(value: unknown, fallback: string) {
 function inferBusinessType(place: GooglePlace | null, currentType: unknown, note: unknown) {
   const types = new Set([place?.primaryType, ...(place?.types || [])].filter(Boolean));
   const text = `${String(note || '')} ${String(currentType || '')}`;
+  if (/選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i.test(text)) return '選物店';
   if (types.has('mens_clothing_store') || /男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
   if (types.has('womens_clothing_store') || /女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
   if (types.has('shopping_mall') || types.has('department_store')) return '購物中心';

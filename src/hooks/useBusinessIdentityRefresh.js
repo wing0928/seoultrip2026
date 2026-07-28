@@ -64,6 +64,7 @@ export default function useBusinessIdentityRefresh(wishlist, setWishlist, { enab
 
 function inferLegacyShopType(place) {
   const text = `${place.nameZh || ''} ${place.nameKo || ''} ${place.note || ''}`;
+  if (/選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i.test(text)) return '選物店';
   if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
   if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
   return '其他';

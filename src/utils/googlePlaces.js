@@ -15,7 +15,7 @@ export const BUSINESS_LOOKUP_VERSION = 7;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
-    ['餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '商店', '購物中心', '逛街'].includes(place?.type);
+    ['餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '商店', '購物中心', '逛街'].includes(place?.type);
 }
 
 export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
@@ -170,6 +170,7 @@ async function callGooglePlaces(body) {
 
 function normalizeLegacyShopType(place) {
   const text = `${place?.nameZh || ''} ${place?.nameKo || ''} ${place?.note || ''}`;
+  if (/選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i.test(text)) return '選物店';
   if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
   if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
   return place?.type === '商店' ? '其他' : (place?.type || '其他');

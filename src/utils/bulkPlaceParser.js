@@ -13,6 +13,7 @@ const TYPE_RULES = [
   ['咖啡廳', /咖啡|coffee|cafe|카페/i],
   ['小吃', /小吃|點心|甜點|餅|snack|디저트|분식/i],
   ['購物中心', /百貨|商場|mall|department/i],
+  ['選物店', /選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i],
   ['男裝', /男裝|男士|男生|mens?\b|남성|남자/i],
   ['女裝', /女裝|女士|女生|womens?\b|여성|여자/i]
 ];

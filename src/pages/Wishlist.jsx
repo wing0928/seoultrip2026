@@ -24,7 +24,7 @@ const emptyForm = {
 };
 
 const emptyBulk = { text: '', sourceUrl: '', recommendationSource: '', area: '' };
-const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '購物中心', '逛街', '拍照點', '其他'];
+const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '其他'];
 const priorities = ['必去', '想去', '有空再去'];
 
 export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus }) {
