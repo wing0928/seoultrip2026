@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+
+test('web app manifest exposes the airplane PNGs at installable sizes', async () => {
+  const manifest = JSON.parse(await readFile(resolve('public/manifest.webmanifest'), 'utf8'));
+  const icons = new Map(manifest.icons.map((icon) => [icon.sizes, icon]));
+
+  assert.equal(icons.get('192x192')?.src, './pwa-icon-192.png');
+  assert.equal(icons.get('512x512')?.src, './pwa-icon-512.png');
+  assert.equal(icons.get('192x192')?.type, 'image/png');
+  assert.equal(icons.get('512x512')?.type, 'image/png');
+});
 
 test('service worker precaches every generated lazy route for offline use', async () => {
   const listeners = {};
@@ -61,6 +72,9 @@ test('service worker precaches every generated lazy route for offline use', asyn
   assert.ok(added.includes('./assets/Itinerary.js'));
   assert.ok(added.includes('./assets/Wishlist.js'));
   assert.ok(added.includes('./assets/SettingsPage.js'));
+  assert.ok(added.includes('./apple-touch-icon.png'));
+  assert.ok(added.includes('./pwa-icon-192.png'));
+  assert.ok(added.includes('./pwa-icon-512.png'));
   assert.ok(added.includes('https://example.com/seoultrip2026/assets/index.css'));
 
   delete globalThis.self;

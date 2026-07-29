@@ -24,3 +24,4 @@
 - iPhone 17（402 × 874）與桌面（1440 × 900）完成視覺檢查。
 - 實際操作完成：韓文複製、深層連結、返回鍵、行程刪除復原、設定取消／儲存／還原、JSON 備份還原、願望新增／搜尋／篩選／刪除復原。
 - production manifest、圖示、Service Worker 與 precache manifest 均可取得；測試瀏覽器可離線重載 app shell。因內建瀏覽器不啟用 Service Worker 控制，完整懶載入離線流程另以 Service Worker 整合測試驗證。
+- 將新生成的飛機圖套用為 Apple Touch Icon（180×180）與 PWA 安裝圖示（192×192、512×512），並將離線快取提升為 `seoul-trip-shell-v4`。

@@ -1,5 +1,10 @@
-const CACHE_NAME = 'seoul-trip-shell-v3';
-const APP_SHELL = ['./manifest.webmanifest', './seoul-trip-icon.svg'];
+const CACHE_NAME = 'seoul-trip-shell-v4';
+const APP_SHELL = [
+  './manifest.webmanifest',
+  './apple-touch-icon.png',
+  './pwa-icon-192.png',
+  './pwa-icon-512.png'
+];
 
 async function cacheAppShell() {
   const cache = await caches.open(CACHE_NAME);
