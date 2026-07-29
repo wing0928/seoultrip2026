@@ -1,0 +1,19 @@
+{
+  "name": "Seoul Trip 2026",
+  "short_name": "Seoul Trip",
+  "description": "家庭共用的首爾旅行行程、願望清單與離線手帳",
+  "lang": "zh-Hant",
+  "start_url": "./#today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f3ea",
+  "theme_color": "#2f6f91",
+  "icons": [
+    {
+      "src": "./seoul-trip-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

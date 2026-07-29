@@ -1,8 +1,10 @@
-import { useRef, useState } from 'react';
-import { CheckCircle2, ImagePlus, LoaderCircle, Pencil, Plus, Sparkles, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { CheckCircle2, ImagePlus, LoaderCircle, Pencil, Plus, Search, SlidersHorizontal, Sparkles, Trash2, X } from 'lucide-react';
 import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
+import UndoToast from '../components/UndoToast.jsx';
 import { districtForArea, districts } from '../data/districts.js';
+import { PLACE_TYPES, WISHLIST_PRIORITIES } from '../data/placeTypes.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
 import { enrichPlaceIdentity, hasCurrentGooglePhotoUrls } from '../utils/googlePlaces.js';
@@ -24,15 +26,22 @@ const emptyForm = {
 };
 
 const emptyBulk = { text: '', sourceUrl: '', recommendationSource: '', area: '' };
-const types = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '其他'];
-const priorities = ['必去', '想去', '有空再去'];
+const quickFilters = [
+  { id: '全部', label: '全部' },
+  { id: '必去', label: '必去' },
+  { id: '未去', label: '未去' },
+  { id: '已去', label: '已去' }
+];
 
 export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus }) {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [quickFilter, setQuickFilter] = useState('全部');
   const [typeFilter, setTypeFilter] = useState('全部');
   const [areaFilter, setAreaFilter] = useState('全部');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkForm, setBulkForm] = useState(emptyBulk);
   const [bulkPreview, setBulkPreview] = useState([]);
@@ -40,13 +49,36 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
   const [bulkMessage, setBulkMessage] = useState('');
   const [screenshotProgress, setScreenshotProgress] = useState(null);
   const screenshotInputRef = useRef(null);
+  const undoTimerRef = useRef(null);
   const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
+  const [undoNotice, setUndoNotice] = useState(null);
   const { googleDetails, googleStatus, loadGoogleDetails } = useGooglePlaceDetails(wishlist);
 
   const filtered = wishlist.filter((item) => {
     const normalizedArea = districtForArea(item.area).name;
-    return (typeFilter === '全部' || item.type === typeFilter) && (areaFilter === '全部' || normalizedArea === areaFilter);
+    const searchText = [
+      item.name,
+      item.nameZh,
+      item.nameKo,
+      item.nameZhSimplified,
+      item.note,
+      item.recommendationSource,
+      item.area
+    ].filter(Boolean).join(' ').toLocaleLowerCase();
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+    const quickMatch = quickFilter === '全部'
+      || (quickFilter === '必去' && item.priority === '必去')
+      || (quickFilter === '未去' && !item.visited)
+      || (quickFilter === '已去' && item.visited);
+    return (!normalizedQuery || searchText.includes(normalizedQuery))
+      && quickMatch
+      && (typeFilter === '全部' || item.type === typeFilter)
+      && (areaFilter === '全部' || normalizedArea === areaFilter);
   });
+
+  useEffect(() => () => window.clearTimeout(undoTimerRef.current), []);
+
+  const advancedFilterCount = Number(typeFilter !== '全部') + Number(areaFilter !== '全部');
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
   }
@@ -195,6 +227,38 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
     }
   }
 
+  function deleteWishlistItem(item) {
+    const sourceIndex = wishlist.findIndex((entry) => entry.id === item.id);
+    setWishlist((items) => items.filter((entry) => entry.id !== item.id));
+    showUndo(`${item.nameZh || item.nameKo || item.name} 已從願望清單刪除`, () => {
+      setWishlist((items) => {
+        if (items.some((entry) => entry.id === item.id)) return items;
+        const next = [...items];
+        next.splice(Math.min(Math.max(sourceIndex, 0), next.length), 0, item);
+        return next;
+      });
+    });
+  }
+
+  function showUndo(message, action) {
+    window.clearTimeout(undoTimerRef.current);
+    setUndoNotice({ message, action });
+    undoTimerRef.current = window.setTimeout(() => setUndoNotice(null), 6000);
+  }
+
+  function undoLastDelete() {
+    undoNotice?.action?.();
+    window.clearTimeout(undoTimerRef.current);
+    setUndoNotice(null);
+  }
+
+  function clearFilters() {
+    setQuery('');
+    setQuickFilter('全部');
+    setTypeFilter('全部');
+    setAreaFilter('全部');
+  }
+
   return (
     <div className="stack">
       <div className="wishlist-toolbar">
@@ -211,30 +275,77 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
         </div>
       </div>
 
-      <div className="wishlist-filter-panel" aria-label="願望清單篩選">
-        <div className="filter-scroll-track" role="group" aria-label="依類型篩選">
-          <button className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>🧭 全部</button>
-          {types.map((type) => (
-            <button key={type} className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
-              {placeTypeEmoji(type)} {type}
-            </button>
-          ))}
-        </div>
-        <div className="filter-scroll-track district-filter-track" role="group" aria-label="依地區篩選">
-          <button className={areaFilter === '全部' ? 'active' : ''} aria-pressed={areaFilter === '全部'} onClick={() => setAreaFilter('全部')}>全部地區</button>
-          {districts.map((district) => (
+      {wishlist.length > 0 && (
+        <div className="wishlist-filter-panel" aria-label="願望清單篩選">
+          <div className="wishlist-search-row">
+            <label className="search-field">
+              <Search size={18} aria-hidden="true" />
+              <span className="visually-hidden">搜尋願望清單</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="搜尋中文、韓文、地區或備註"
+              />
+            </label>
             <button
-              key={district.id}
-              className={areaFilter === district.name ? 'active' : ''}
-              style={{ '--filter-color': district.color }}
-              aria-pressed={areaFilter === district.name}
-              onClick={() => setAreaFilter(district.name)}
+              type="button"
+              className={`filter-toggle ${filtersOpen || advancedFilterCount ? 'active' : ''}`}
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
             >
-              <span />#{district.name}
+              <SlidersHorizontal size={18} />
+              篩選{advancedFilterCount ? ` ${advancedFilterCount}` : ''}
             </button>
-          ))}
+          </div>
+          <div className="scroll-row">
+            <div className="filter-scroll-track quick-filter-track" role="group" aria-label="常用篩選">
+              {quickFilters.map((filter) => (
+                <button
+                  key={filter.id}
+                  className={quickFilter === filter.id ? 'active' : ''}
+                  aria-pressed={quickFilter === filter.id}
+                  onClick={() => setQuickFilter(filter.id)}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {filtersOpen && (
+            <div className="advanced-filters">
+              <div className="scroll-row">
+                <div className="filter-scroll-track" role="group" aria-label="依類型篩選">
+                  <button className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>🧭 全部類型</button>
+                  {PLACE_TYPES.map((type) => (
+                    <button key={type} className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
+                      {placeTypeEmoji(type)} {type}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="scroll-row">
+                <div className="filter-scroll-track district-filter-track" role="group" aria-label="依地區篩選">
+                  <button className={areaFilter === '全部' ? 'active' : ''} aria-pressed={areaFilter === '全部'} onClick={() => setAreaFilter('全部')}>全部地區</button>
+                  {districts.map((district) => (
+                    <button
+                      key={district.id}
+                      className={areaFilter === district.name ? 'active' : ''}
+                      style={{ '--filter-color': district.color }}
+                      aria-pressed={areaFilter === district.name}
+                      onClick={() => setAreaFilter(district.name)}
+                    >
+                      <span />#{district.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button type="button" className="text-button clear-filter-button" onClick={clearFilters}>清除所有篩選</button>
+            </div>
+          )}
+          <p className="filter-result-count">顯示 {filtered.length} / {wishlist.length} 個地點</p>
         </div>
-      </div>
+      )}
 
       <div className="place-list wishlist-list">
         {filtered.map((item) => {
@@ -250,11 +361,22 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               showGoogleDetails
               onOpenGoogle={() => openGoogleDialog(item)}
               onAreaSelect={(district) => setAreaFilter(district.name)}
-              actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => setWishlist((items) => items.filter((old) => old.id !== item.id))}><Trash2 size={17} /> 刪除</button></>}
+              actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => deleteWishlistItem(item)}><Trash2 size={17} /> 刪除</button></>}
             />
           );
         })}
-        {!filtered.length && <p className="empty">還沒有符合條件的願望。先加一個吧。</p>}
+        {!filtered.length && (
+          <div className="empty-state">
+            <HeartEmptyIcon />
+            <strong>{wishlist.length ? '沒有符合條件的願望' : '願望清單還是空的'}</strong>
+            <p>{wishlist.length ? '換個搜尋字詞或清除篩選再看看。' : '先新增第一個想去的地方，之後就能搜尋與分類。'}</p>
+            {wishlist.length ? (
+              <button type="button" className="wide-button secondary" onClick={clearFilters}>清除篩選</button>
+            ) : (
+              <button type="button" className="wide-button" onClick={openNewEditor}><Plus size={18} /> 新增第一個地點</button>
+            )}
+          </div>
+        )}
       </div>
 
       <GoogleReviewDialog
@@ -275,8 +397,8 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
             <form className="form-grid spacious-form dialog-form" onSubmit={submit}>
               <label>中文名稱<input value={form.nameZh} onChange={(event) => updateField('nameZh', event.target.value)} placeholder="例如：滿杯阿里郎包飯本店" /></label>
               <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如：만배아리랑보쌈 본점" /></label>
-              <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{types.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
-              <label>優先度<select value={form.priority} onChange={(event) => updateField('priority', event.target.value)}>{priorities.map((item) => <option key={item}>{item}</option>)}</select></label>
+              <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
+              <label>優先度<select value={form.priority} onChange={(event) => updateField('priority', event.target.value)}>{WISHLIST_PRIORITIES.map((item) => <option key={item}>{item}</option>)}</select></label>
               <fieldset className="area-fieldset full">
                 <legend>地區</legend>
                 <div className="area-tag-options">
@@ -391,6 +513,15 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
           </section>
         </div>
       )}
+      <UndoToast
+        message={undoNotice?.message}
+        onUndo={undoLastDelete}
+        onClose={() => setUndoNotice(null)}
+      />
     </div>
   );
+}
+
+function HeartEmptyIcon() {
+  return <span className="empty-state-icon" aria-hidden="true">♡</span>;
 }

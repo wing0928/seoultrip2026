@@ -1,56 +1,147 @@
-import { CalendarDays, Heart, ListChecks, Plane, Route } from 'lucide-react';
-import InfoCard from '../components/InfoCard.jsx';
-import LinkButton from '../components/LinkButton.jsx';
+import { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, CalendarClock, CircleCheck, Clock3, Copy, Navigation } from 'lucide-react';
+import NaverMapButton from '../components/NaverMapButton.jsx';
+import { findNextStop, getSeoulNow, selectTripDay } from '../utils/tripTime.js';
 
-const quickLinks = [
-  { id: 'itinerary', label: '每日行程', icon: CalendarDays },
-  { id: 'wishlist', label: '願望清單', icon: Heart },
-  { id: 'overview', label: '行程總覽', icon: ListChecks },
-  { id: 'transport', label: '交通資訊', icon: Route }
-];
+export default function Dashboard({ trip, itinerary, onOpenItinerary }) {
+  const [now, setNow] = useState(() => new Date());
+  const [copiedId, setCopiedId] = useState('');
+  const [copyMessage, setCopyMessage] = useState('');
+  const seoulNow = useMemo(() => getSeoulNow(now), [now]);
+  const selection = useMemo(() => selectTripDay(itinerary, now), [itinerary, now]);
+  const nextStop = useMemo(
+    () => findNextStop(selection.day, now, selection.phase),
+    [now, selection.day, selection.phase]
+  );
 
-export default function Dashboard({ trip, setActivePage }) {
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!copiedId) return undefined;
+    const timer = window.setTimeout(() => {
+      setCopiedId('');
+      setCopyMessage('');
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [copiedId]);
+
+  async function copyKorean(stop) {
+    const korean = String(stop?.nameKo || stop?.koreanName || '').trim();
+    if (!korean) return;
+    try {
+      await navigator.clipboard.writeText(korean);
+      setCopiedId(stop.id);
+      setCopyMessage(`已複製 ${korean}`);
+    } catch {
+      setCopyMessage('無法複製，請長按韓文名稱手動複製');
+    }
+  }
+
+  if (!selection.day) return <p className="empty">目前沒有可顯示的行程。</p>;
+
+  const phaseLabel = {
+    today: `今天是旅行第 ${selection.index + 1} 天`,
+    upcoming: `距離出發 ${selection.daysUntil} 天 · 預覽第 ${selection.index + 1} 天`,
+    finished: '旅程已結束 · 回顧最後一天'
+  }[selection.phase];
+
   return (
-    <div className="stack">
-      <section className="hero-card">
-        <p className="eyebrow">Seoul Trip 2026</p>
-        <h2>{trip.tripName}</h2>
-        <p>{trip.dates} · {trip.nights}</p>
-        <div className="hero-tags">
-          <span>首爾自由行</span>
-          <span>手機導航版</span>
-          <span>旅行手帳</span>
+    <div className="stack today-page">
+      <section className="today-hero">
+        <div className="today-hero-copy">
+          <p className="eyebrow">韓國標準時間 KST</p>
+          <h2>{seoulNow.timeLabel}</h2>
+          <p>{seoulNow.dateLabel} · {seoulNow.weekday}</p>
         </div>
+        <Clock3 size={34} aria-hidden="true" />
       </section>
 
-      <div className="quick-grid">
-        {quickLinks.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button key={item.id} className="quick-card" onClick={() => setActivePage(item.id)}>
-              <Icon size={22} />
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      <section className="today-day-card" aria-labelledby="today-day-title">
+        <div className="today-day-head">
+          <div>
+            <p className="today-phase"><CalendarClock size={16} /> {phaseLabel}</p>
+            <p className="meta">{selection.day.date}</p>
+            <h2 id="today-day-title">{selection.day.title}</h2>
+          </div>
+          <span>{selection.day.areaFocus}</span>
+        </div>
+        {selection.day.note && <p className="day-note">{selection.day.note}</p>}
+      </section>
 
-      <InfoCard title="住宿資訊">
-        <dl className="detail-list">
-          <div><dt>飯店名稱</dt><dd>{trip.hotelName}</dd></div>
-          <div><dt>地址</dt><dd>{trip.hotelAddress}</dd></div>
-          <div><dt>Naver Map</dt><dd><LinkButton href={trip.hotelMapUrl}>開啟飯店地圖</LinkButton></dd></div>
-        </dl>
-      </InfoCard>
+      <section className="next-stop-card" aria-labelledby="next-stop-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Next stop</p>
+            <h2 id="next-stop-title">{nextStop ? '下一站' : '今日進度'}</h2>
+          </div>
+          {nextStop?.time && <time>{nextStop.time}</time>}
+        </div>
 
-      <InfoCard title="航班資訊" action={<Plane size={20} />}>
-        <dl className="detail-list">
-          <div><dt>去程航班</dt><dd>{trip.outboundFlight}</dd></div>
-          <div><dt>回程航班</dt><dd>{trip.returnFlight}</dd></div>
-          <div><dt>抵達機場</dt><dd>{trip.arrivalAirport}</dd></div>
-          <div><dt>離開機場</dt><dd>{trip.departureAirport}</dd></div>
-        </dl>
-      </InfoCard>
+        {nextStop ? (
+          <>
+            <h3>{nextStop.nameZh || nextStop.name}</h3>
+            {nextStop.nameKo && <p className="korean-name" lang="ko">{nextStop.nameKo}</p>}
+            {nextStop.note && <p className="soft-text">{nextStop.note}</p>}
+            <div className="today-primary-actions">
+              <NaverMapButton place={nextStop} variant="primary">
+                <Navigation size={18} />
+                開始導航
+              </NaverMapButton>
+              {nextStop.nameKo && (
+                <button type="button" className={`copy-korean-button ${copiedId === nextStop.id ? 'success' : ''}`} onClick={() => copyKorean(nextStop)}>
+                  {copiedId === nextStop.id ? <CircleCheck size={18} /> : <Copy size={18} />}
+                  {copiedId === nextStop.id ? '已複製韓文' : '複製韓文'}
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="today-complete">
+            <CircleCheck size={24} />
+            <div>
+              <strong>{selection.phase === 'finished' ? '旅程已完成' : '今天的行程已完成'}</strong>
+              <p>可以到行程頁回顧或調整安排。</p>
+            </div>
+          </div>
+        )}
+        {copyMessage && <p className={`copy-status ${copiedId ? 'success' : ''}`} role="status">{copyMessage}</p>}
+      </section>
+
+      <section className="today-timeline" aria-labelledby="today-timeline-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">Day plan</p>
+            <h2 id="today-timeline-title">當日行程</h2>
+          </div>
+          <button type="button" className="text-button" onClick={() => onOpenItinerary(selection.day.id)}>
+            完整行程 <ArrowRight size={17} />
+          </button>
+        </div>
+        <ol>
+          {selection.day.stops.map((stop) => {
+            const isNext = nextStop?.id === stop.id;
+            return (
+              <li key={stop.id} className={isNext ? 'next' : ''}>
+                <time>{stop.time || '--:--'}</time>
+                <span className="timeline-dot" aria-hidden="true" />
+                <div>
+                  <strong>{stop.nameZh || stop.name}</strong>
+                  {stop.nameKo && <small lang="ko">{stop.nameKo}</small>}
+                  <span>{stop.period} · {stop.area}</span>
+                </div>
+                {stop.nameKo && (
+                  <button type="button" onClick={() => copyKorean(stop)} aria-label={`複製 ${stop.nameKo}`}>
+                    {copiedId === stop.id ? <CircleCheck size={18} /> : <Copy size={17} />}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
     </div>
   );
 }

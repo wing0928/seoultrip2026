@@ -11,7 +11,12 @@ const NAVER_LINK_SEARCH_ALIASES = {
 };
 
 function withoutEnglishSeoul(query = '') {
-  return String(query).replace(/\bSeoul\b/gi, ' ').replace(/\s+/g, ' ').trim();
+  return String(query)
+    .replace(/\bSeoul\b/gi, ' ')
+    .replace(/\s*,\s*,+/g, ', ')
+    .replace(/,\s*(到|$)/g, ' $1')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function searchMapUrl(query) {

@@ -1,4 +1,4 @@
-import { Navigation } from 'lucide-react';
+import { MoreHorizontal, Navigation } from 'lucide-react';
 import LinkButton from './LinkButton.jsx';
 import NaverMapButton from './NaverMapButton.jsx';
 import { GoogleRatingStrip, PlacePhotoStrip } from './GooglePlaceDetails.jsx';
@@ -22,6 +22,7 @@ export default function PlaceCard({
   const district = districtForArea(place.area);
   const supportsDetails = showGoogleDetails && supportsGoogleDetails(place);
   const AreaTag = onAreaSelect ? 'button' : 'span';
+  const hasRoute = Boolean(place.routeUrl && !place.transportFromPrevious);
 
   return (
     <article className={`place-card ${compact ? 'compact' : ''} ${visited ? 'visited' : ''}`}>
@@ -47,12 +48,26 @@ export default function PlaceCard({
         {place.reason && <p>{place.reason}</p>}
         {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} />}
         <div className="button-row place-link-row">
-          <NaverMapButton place={place} />
-          <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
-          {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
-          {place.routeUrl && !place.transportFromPrevious && <LinkButton href={place.routeUrl}><Navigation size={16} /> Naver 路線</LinkButton>}
+          {hasRoute ? (
+            <LinkButton href={place.routeUrl} variant="primary"><Navigation size={17} /> 開始導航</LinkButton>
+          ) : (
+            <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
+          )}
+          <details className="place-links-menu">
+            <summary>其他連結</summary>
+            <div>
+              {hasRoute && <NaverMapButton place={place} />}
+              <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
+              {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
+            </div>
+          </details>
         </div>
-        {actions && <div className="action-row">{actions}</div>}
+        {actions && (
+          <details className="card-actions-menu">
+            <summary><MoreHorizontal size={18} /> 更多操作</summary>
+            <div className="action-row">{actions}</div>
+          </details>
+        )}
       </div>
     </article>
   );

@@ -98,7 +98,7 @@ export async function getGoogleMapLocations(places, { refresh = false } = {}) {
   return locations.sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
 }
 
-export async function resolvePlaceIdentity(place) {
+async function resolvePlaceIdentity(place) {
   if (!googlePlacesConfigured) {
     throw new GooglePlacesError('not_configured', 'Google Places 尚未連線');
   }
@@ -147,7 +147,7 @@ export function needsBusinessIdentityRefresh(place) {
   return Number(place.businessLookupVersion || 0) < BUSINESS_LOOKUP_VERSION;
 }
 
-export class GooglePlacesError extends Error {
+class GooglePlacesError extends Error {
   constructor(code, message) {
     super(message);
     this.name = 'GooglePlacesError';

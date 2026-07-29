@@ -152,24 +152,26 @@ export function enrichItinerary(days) {
     stops: day.stops.map((item, index, items) => {
       const query = `${item.nameKo || item.name || item.nameZh} ${item.area || ''}`.trim();
       const previous = items[index - 1];
+      const previousQuery = previous
+        ? `${previous.nameKo || previous.name || previous.nameZh} ${previous.area || ''}`.trim()
+        : '';
       return {
         ...item,
         time: normalizeStopTime(item.time),
         mapUrl: searchMapUrl(query),
-        routeUrl: previous ? routeMapUrl(`${previous.nameKo || previous.name} ${previous.area || ''}`.trim(), query) : searchMapUrl(query)
+        routeUrl: previousQuery && previousQuery !== query
+          ? routeMapUrl(previousQuery, query)
+          : (previous ? '' : searchMapUrl(query))
       };
     })
   }));
 }
 
-export const itineraryDays = enrichItinerary(rawDays);
-
-export function makeDailyRoutes(days) {
+export function toPersistedItinerary(days = []) {
   return days.map((day) => ({
-    date: day.date,
-    title: day.title,
-    route: day.stops.map((stopItem) => stopItem.name).join(' → ')
+    ...day,
+    stops: day.stops.map(({ mapUrl, routeUrl, ...item }) => item)
   }));
 }
 
-export const dailyRoutes = makeDailyRoutes(itineraryDays);
+export const itineraryDays = enrichItinerary(rawDays);

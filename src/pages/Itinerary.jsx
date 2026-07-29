@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigation, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import LinkButton from '../components/LinkButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
+import UndoToast from '../components/UndoToast.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
+import { ITINERARY_PLACE_TYPES } from '../data/placeTypes.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
 import { routeMapUrl } from '../utils/maps.js';
@@ -42,7 +44,6 @@ const emptyTransport = {
   note: ''
 };
 
-const typeOptions = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '交通', '休息', '其他'];
 const transportModes = ['地鐵', '公車', '步行', '計程車', 'AREX / 鐵路', '包車', '待確認'];
 const periodLabels = {
   上午: '☀️ 上午',
@@ -62,6 +63,13 @@ function showsGoogleDetails(place) {
   );
 }
 
+function itineraryDayFromHash(itinerary) {
+  const [page, dayId] = window.location.hash.replace(/^#/, '').split('/');
+  return page === 'itinerary' && itinerary.some((day) => day.id === dayId)
+    ? dayId
+    : itinerary[0]?.id || '';
+}
+
 export default function Itinerary({ trip, itinerary, setItinerary, wishlist = [] }) {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(emptyStop);
@@ -69,11 +77,24 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   const [dayForm, setDayForm] = useState(emptyDay);
   const [transportEditing, setTransportEditing] = useState(null);
   const [transportForm, setTransportForm] = useState(emptyTransport);
-  const [selectedDayId, setSelectedDayId] = useState(() => itinerary[0]?.id || '');
+  const [selectedDayId, setSelectedDayId] = useState(() => itineraryDayFromHash(itinerary));
   const [periodFilter, setPeriodFilter] = useState('全部');
   const [googleDialogPlace, setGoogleDialogPlace] = useState(null);
+  const [undoNotice, setUndoNotice] = useState(null);
+  const undoTimerRef = useRef(null);
   const googleStops = itinerary.flatMap((day) => day.stops).filter(showsGoogleDetails);
   const { googleDetails, googleStatus, loadGoogleDetails } = useGooglePlaceDetails(googleStops);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const nextDayId = itineraryDayFromHash(itinerary);
+      if (nextDayId) setSelectedDayId(nextDayId);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [itinerary]);
+
+  useEffect(() => () => window.clearTimeout(undoTimerRef.current), []);
 
   function startAdd(dayId, period = '上午', anchor = 'day') {
     const isSameAdd = editing?.mode === 'add' && editing.dayId === dayId && editing.period === period && editing.anchor === anchor;
@@ -178,6 +199,9 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
 
   function selectDay(dayId) {
     setSelectedDayId(dayId);
+    if (window.location.hash !== `#itinerary/${dayId}`) {
+      window.location.hash = `itinerary/${dayId}`;
+    }
     setPeriodFilter('全部');
     cancelEdit();
     cancelDayEdit();
@@ -313,14 +337,32 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   }
 
   function deleteStop(dayId, stopId) {
-    const nextDays = itinerary.map((day) => (
+    const sourceDay = itinerary.find((day) => day.id === dayId);
+    const sourceIndex = sourceDay?.stops.findIndex((stop) => stop.id === stopId) ?? -1;
+    const deletedStop = sourceDay?.stops[sourceIndex];
+    if (!deletedStop) return;
+
+    setItinerary((current) => enrichItinerary(current.map((day) => (
       day.id === dayId ? { ...day, stops: day.stops.filter((stop) => stop.id !== stopId) } : day
-    ));
-    setItinerary(enrichItinerary(nextDays));
+    ))));
+    showUndo(`${deletedStop.nameZh || deletedStop.name} 已從行程刪除`, () => {
+      setItinerary((current) => enrichItinerary(current.map((day) => {
+        if (day.id !== dayId || day.stops.some((stop) => stop.id === stopId)) return day;
+        const stops = [...day.stops];
+        stops.splice(Math.min(sourceIndex, stops.length), 0, deletedStop);
+        return { ...day, stops };
+      })));
+    });
   }
 
   function deleteTransport(dayId, stopId) {
-    const nextDays = itinerary.map((day) => (
+    const deletedTransport = itinerary
+      .find((day) => day.id === dayId)
+      ?.stops.find((stop) => stop.id === stopId)
+      ?.transportFromPrevious;
+    if (!deletedTransport) return;
+
+    setItinerary((current) => enrichItinerary(current.map((day) => (
       day.id === dayId
         ? {
             ...day,
@@ -331,9 +373,32 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
             })
           }
         : day
-    ));
-    setItinerary(enrichItinerary(nextDays));
+    ))));
     cancelTransportEdit();
+    showUndo('交通方式已刪除', () => {
+      setItinerary((current) => enrichItinerary(current.map((day) => (
+        day.id === dayId
+          ? {
+              ...day,
+              stops: day.stops.map((stop) => (
+                stop.id === stopId ? { ...stop, transportFromPrevious: deletedTransport } : stop
+              ))
+            }
+          : day
+      ))));
+    });
+  }
+
+  function showUndo(message, action) {
+    window.clearTimeout(undoTimerRef.current);
+    setUndoNotice({ message, action });
+    undoTimerRef.current = window.setTimeout(() => setUndoNotice(null), 6000);
+  }
+
+  function undoLastDelete() {
+    undoNotice?.action?.();
+    window.clearTimeout(undoTimerRef.current);
+    setUndoNotice(null);
   }
 
   function stopEditor(title) {
@@ -361,7 +426,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
           <label>主要顯示名稱<input value={form.name} onChange={(event) => updateField('name', event.target.value)} placeholder="例如 景福宮" /></label>
           <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如 경복궁" /></label>
           <label>中文名稱<input value={form.nameZh} onChange={(event) => updateField('nameZh', event.target.value)} placeholder="例如 景福宮" /></label>
-          <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{typeOptions.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
+          <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{ITINERARY_PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
           <label>地區<input value={form.area} onChange={(event) => updateField('area', event.target.value)} placeholder="例如 弘大 / 聖水 / 漢南" /></label>
           <label className="full">地點簡述<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="寫下必吃、交通、營業時間或排隊提醒" /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>
@@ -456,25 +521,29 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       </div>
 
       <div className="wishlist-filter-panel itinerary-filter-panel" aria-label="行程篩選">
-        <div className="filter-scroll-track itinerary-day-track" role="tablist" aria-label="選擇日期">
-          {itinerary.map((day, index) => (
-            <button
-              key={day.id}
-              className={selectedDay.id === day.id ? 'active' : ''}
-              aria-selected={selectedDay.id === day.id}
-              role="tab"
-              title={day.title}
-              onClick={() => selectDay(day.id)}
-            >
-              第 {index + 1} 天 · {shortDate(day.date)}
-            </button>
-          ))}
+        <div className="scroll-row">
+          <div className="filter-scroll-track itinerary-day-track" role="tablist" aria-label="選擇日期">
+            {itinerary.map((day, index) => (
+              <button
+                key={day.id}
+                className={selectedDay.id === day.id ? 'active' : ''}
+                aria-selected={selectedDay.id === day.id}
+                role="tab"
+                title={day.title}
+                onClick={() => selectDay(day.id)}
+              >
+                第 {index + 1} 天 · {shortDate(day.date)}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="filter-scroll-track" role="group" aria-label="依時段篩選">
-          <button className={periodFilter === '全部' ? 'active' : ''} aria-pressed={periodFilter === '全部'} onClick={() => selectPeriod('全部')}>🗓️ 全部時段</button>
-          {periods.map((period) => (
-            <button key={period} className={periodFilter === period ? 'active' : ''} aria-pressed={periodFilter === period} onClick={() => selectPeriod(period)}>{periodLabels[period]}</button>
-          ))}
+        <div className="scroll-row">
+          <div className="filter-scroll-track" role="group" aria-label="依時段篩選">
+            <button className={periodFilter === '全部' ? 'active' : ''} aria-pressed={periodFilter === '全部'} onClick={() => selectPeriod('全部')}>🗓️ 全部時段</button>
+            {periods.map((period) => (
+              <button key={period} className={periodFilter === period ? 'active' : ''} aria-pressed={periodFilter === period} onClick={() => selectPeriod(period)}>{periodLabels[period]}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -533,6 +602,11 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
         status={googleDialogPlace ? googleStatus[googleDialogPlace.id] : ''}
         onClose={() => setGoogleDialogPlace(null)}
         onRefresh={() => loadGoogleDetails(googleDialogPlace, true)}
+      />
+      <UndoToast
+        message={undoNotice?.message}
+        onUndo={undoLastDelete}
+        onClose={() => setUndoNotice(null)}
       />
     </div>
   );

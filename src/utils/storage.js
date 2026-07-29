@@ -1,8 +1,8 @@
-import { itineraryDays, migrateTripItinerary } from '../data/itinerary.js';
+import { itineraryDays, migrateTripItinerary, toPersistedItinerary } from '../data/itinerary.js';
 import { inferPlaceType } from './bulkPlaceParser.js';
 import { searchMapUrl } from './maps.js';
 
-export const DEFAULT_TRIP = {
+const DEFAULT_TRIP = {
   tripName: 'Seoul Trip 2026',
   dates: '2026/8/17–8/22',
   nights: '6 天 5 夜',
@@ -34,6 +34,7 @@ const KEYS = {
 };
 
 export function loadTripSettings() {
+  cleanupObsoleteCaches();
   const savedTrip = loadJson(KEYS.trip, {});
   const trip = { ...DEFAULT_TRIP, ...savedTrip };
 
@@ -116,20 +117,12 @@ export function saveWishlist(items) {
   saveJson(KEYS.wishlist, items);
 }
 
-export function loadImports() {
-  return loadJson(KEYS.imports, []);
-}
-
-export function saveImports(items) {
-  saveJson(KEYS.imports, items);
-}
-
 export function loadItinerary() {
   return migrateTripItinerary(loadJson(KEYS.itinerary, itineraryDays));
 }
 
 export function saveItinerary(days) {
-  saveJson(KEYS.itinerary, days);
+  saveJson(KEYS.itinerary, toPersistedItinerary(days));
 }
 
 export function loadSyncCode() {
@@ -155,4 +148,27 @@ function loadJson(key, fallback) {
 
 function saveJson(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function cleanupObsoleteCaches() {
+  try {
+    const activeKeys = new Set([
+      'seoul-trip-2026:google-places-cache-v7',
+      'seoul-trip-2026:google-map-locations-v1'
+    ]);
+    const obsoleteKeys = [];
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (
+        key?.startsWith('seoul-trip-2026:google-places-cache-')
+        && !activeKeys.has(key)
+      ) {
+        obsoleteKeys.push(key);
+      }
+    }
+    obsoleteKeys.forEach((key) => localStorage.removeItem(key));
+    if (!loadJson(KEYS.imports, []).length) localStorage.removeItem(KEYS.imports);
+  } catch {
+    // Cache cleanup must never prevent the itinerary from loading.
+  }
 }

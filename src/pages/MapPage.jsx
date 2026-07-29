@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ExternalLink, MapPin } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { districtForArea, districts } from '../data/districts.js';
+import { PLACE_TYPES } from '../data/placeTypes.js';
 import { getGoogleMapLocations } from '../utils/googlePlaces.js';
 import {
   googleMapsBrowserApiKey,
@@ -11,7 +12,7 @@ import {
 import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
 import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
-const TYPE_ORDER = ['景點', '餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '購物中心', '逛街', '拍照點', '其他'];
+const TYPE_ORDER = PLACE_TYPES;
 const PLACE_FOCUS_ZOOM = 19;
 
 export default function MapPage({ wishlist = [] }) {
@@ -229,15 +230,17 @@ export default function MapPage({ wishlist = [] }) {
         </div>
         <div className="map-type-picker">
           <strong>選取景點類型</strong>
-          <div className="filter-scroll-track" role="group" aria-label="依景點類型篩選地圖">
-            <button type="button" className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>
-              🧭 全部
-            </button>
-            {availableTypes.map((type) => (
-              <button key={type} type="button" className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
-                {placeTypeEmoji(type)} {type}
+          <div className="scroll-row">
+            <div className="filter-scroll-track" role="group" aria-label="依景點類型篩選地圖">
+              <button type="button" className={typeFilter === '全部' ? 'active' : ''} aria-pressed={typeFilter === '全部'} onClick={() => setTypeFilter('全部')}>
+                🧭 全部
               </button>
-            ))}
+              {availableTypes.map((type) => (
+                <button key={type} type="button" className={typeFilter === type ? 'active' : ''} aria-pressed={typeFilter === type} onClick={() => setTypeFilter(type)}>
+                  {placeTypeEmoji(type)} {type}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </section>

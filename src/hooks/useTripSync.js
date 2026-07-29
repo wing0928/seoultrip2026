@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { enrichItinerary, migrateTripItinerary } from '../data/itinerary.js';
+import { enrichItinerary, migrateTripItinerary, toPersistedItinerary } from '../data/itinerary.js';
 import { clearSyncCode, loadSyncCode, migrateWishlistAreas, saveSyncCode } from '../utils/storage.js';
 import {
   supabase,
@@ -134,7 +134,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
       const payload = await callSyncFunction({
         action,
         workspaceCode: normalizedCode,
-        state: action === 'create' ? currentStateRef.current : undefined,
+        state: action === 'create' ? persistedState(currentStateRef.current) : undefined,
         clientId: clientIdRef.current
       });
       if (!mountedRef.current || attempt !== connectionAttemptRef.current) return payload;
@@ -189,7 +189,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
 
     setStatus('saving');
     setError('');
-    const state = currentStateRef.current;
+    const state = persistedState(currentStateRef.current);
     try {
       const payload = await callSyncFunction({
         action: 'save',
@@ -283,7 +283,7 @@ export function useTripSync({ trip, itinerary, wishlist, setTrip, setItinerary, 
   };
 }
 
-export function normalizeSyncCode(code) {
+function normalizeSyncCode(code) {
   return String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
 
@@ -348,6 +348,13 @@ function isTripState(state) {
 
 function fingerprint(value) {
   return JSON.stringify(value);
+}
+
+function persistedState(state) {
+  return {
+    ...state,
+    itinerary: toPersistedItinerary(state.itinerary)
+  };
 }
 
 async function callSyncFunction(body) {
