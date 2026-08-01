@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
+import { itineraryDays } from '../src/data/itinerary.js';
 import { googleMapEmbedUrl, googleMapUrl } from '../src/utils/maps.js';
 import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
 import { migrateWishlist, migrateWishlistAreas } from '../src/utils/storage.js';
@@ -101,6 +102,11 @@ test('legacy shop categories display as the new clothing category', () => {
   assert.equal(normalizePlaceType('男裝'), '服裝');
   assert.equal(normalizePlaceType('女裝'), '服裝');
   assert.equal(normalizePlaceType('逛街'), '景點');
+});
+
+test('seed itinerary no longer uses removed place type labels', () => {
+  const types = itineraryDays.flatMap((day) => day.stops.map((stop) => stop.type));
+  assert.equal(types.some((type) => ['美食', '逛街', '拍照點'].includes(type)), false);
 });
 
 test('bulk parser recognizes Dongdaemun aliases', () => {

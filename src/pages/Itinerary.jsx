@@ -479,7 +479,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
               <p className="bulk-area-help">不會改動原本手動建立的地區 # 標籤。</p>
             </fieldset>
           )}
-          <label className="full">地點簡述<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="寫下必吃、交通、營業時間或排隊提醒" /></label>
+          <label className="full">備註<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="儲存行程細項、必吃、營業時間或排隊提醒" /></label>
           <label className="full">CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>
         </form>
