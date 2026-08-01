@@ -10,7 +10,7 @@ import {
   loadGoogleMaps
 } from '../utils/googleMapsLoader.js';
 import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
-import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
+import { formatPlaceName, formatPlaceType, normalizePlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const TYPE_ORDER = PLACE_TYPES;
 const PLACE_FOCUS_ZOOM = 19;
@@ -39,14 +39,14 @@ export default function MapPage({ wishlist = [] }) {
     wishlist.filter((place) => districtForArea(place.area).id === selectedDistrict.id)
   ), [selectedDistrict.id, wishlist]);
   const availableTypes = useMemo(() => {
-    const present = new Set(districtPlaces.map((place) => place.type || '其他'));
+    const present = new Set(districtPlaces.map((place) => normalizePlaceType(place.type)));
     return [
       ...TYPE_ORDER.filter((type) => present.has(type)),
       ...Array.from(present).filter((type) => !TYPE_ORDER.includes(type))
     ];
   }, [districtPlaces]);
   const visiblePlaces = useMemo(() => (
-    districtPlaces.filter((place) => typeFilter === '全部' || (place.type || '其他') === typeFilter)
+    districtPlaces.filter((place) => typeFilter === '全部' || normalizePlaceType(place.type) === typeFilter)
   ), [districtPlaces, typeFilter]);
   const orderedVisiblePlaces = useMemo(() => {
     const selectedIndex = visiblePlaces.findIndex((place) => place.id === selectedId);
@@ -347,6 +347,7 @@ export default function MapPage({ wishlist = [] }) {
                       <div className="map-place-links">
                         <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
                         <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
+                        {place.catchtableUrl && <a href={place.catchtableUrl} target="_blank" rel="noreferrer">CATCHTABLE</a>}
                         {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
                       </div>
                     </div>

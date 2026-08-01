@@ -14,8 +14,7 @@ const TYPE_RULES = [
   ['小吃', /小吃|點心|甜點|餅|snack|디저트|분식/i],
   ['購物中心', /百貨|商場|mall|department/i],
   ['選物店', /選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i],
-  ['男裝', /男裝|男士|男生|mens?\b|남성|남자/i],
-  ['女裝', /女裝|女士|女生|womens?\b|여성|여자/i]
+  ['服裝', /男裝|男士|男生|女裝|女士|女生|mens?\b|womens?\b|남성|남자|여성|여자|鞋子|shoes?\b/i]
 ];
 
 const NUMBERED_LINE = /^\s*\d+[.)、．]\s*/;
@@ -81,10 +80,11 @@ function makePlace(entry, sourceUrl, recommendationSource) {
   const urls = [...entry.matchAll(URL_PATTERN)].map(([url]) => trimUrl(url));
   const naverMapUrl = urls.find(isNaverUrl) || '';
   const googleMapUrl = urls.find(isGoogleMapsUrl) || '';
+  const catchtableUrl = urls.find(isCatchtableUrl) || '';
   const detailText = detailLines.join('\n');
   const textWithoutMapUrls = detailText.replace(URL_PATTERN, (url) => {
     const cleanedUrl = trimUrl(url);
-    return isNaverUrl(cleanedUrl) || isGoogleMapsUrl(cleanedUrl) ? '' : url;
+    return isNaverUrl(cleanedUrl) || isGoogleMapsUrl(cleanedUrl) || isCatchtableUrl(cleanedUrl) ? '' : url;
   }).trim();
   const koreanMatch = placeName.match(/[가-힣][가-힣\d&'().·\- \t]*/)?.[0]?.trim() || '';
   const note = textWithoutMapUrls
@@ -106,6 +106,7 @@ function makePlace(entry, sourceUrl, recommendationSource) {
     area,
     sourceUrl,
     recommendationSource,
+    catchtableUrl,
     naverMapUrl,
     googleMapUrl,
     bulkImported: true,
@@ -131,4 +132,8 @@ function isNaverUrl(url) {
 
 function isGoogleMapsUrl(url) {
   return /(?:google\.[^/]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
+}
+
+function isCatchtableUrl(url) {
+  return /catchtable\./i.test(url);
 }

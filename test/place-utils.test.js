@@ -4,6 +4,8 @@ import { parseBulkPlaces } from '../src/utils/bulkPlaceParser.js';
 import { googleMapEmbedUrl, googleMapUrl } from '../src/utils/maps.js';
 import { parseScreenshotPlaces, parseScreenshotText, screenshotPlacesToBulkText } from '../src/utils/screenshotPlaces.js';
 import { migrateWishlist, migrateWishlistAreas } from '../src/utils/storage.js';
+import { normalizePlaceType } from '../src/utils/placePresentation.js';
+import { matchesWishlistQuery } from '../src/utils/wishlistSearch.js';
 
 test('Google Maps search uses only the resolved place name', () => {
   const url = new URL(googleMapUrl({
@@ -79,6 +81,26 @@ test('bulk parser recognizes select shops before general clothing categories', (
   });
 
   assert.equal(place.type, '選物店');
+});
+
+test('bulk parser keeps a CATCHTABLE URL as a dedicated link', () => {
+  const [place] = parseBulkPlaces({
+    text: '1. 강남 곱 江南烤腸\nhttps://app.catchtable.co.kr/restaurant/123\n熱門烤腸'
+  });
+  assert.equal(place.catchtableUrl, 'https://app.catchtable.co.kr/restaurant/123');
+  assert.doesNotMatch(place.note, /catchtable/i);
+});
+
+test('wishlist search matches the known Chinese translation for 꿉당 성수점', () => {
+  const place = { nameKo: '꿉당 성수점', nameZh: '', area: '聖水洞' };
+  assert.equal(matchesWishlistQuery(place, '烤堂'), true);
+  assert.equal(matchesWishlistQuery(place, '聖水店'), true);
+});
+
+test('legacy shop categories display as the new clothing category', () => {
+  assert.equal(normalizePlaceType('男裝'), '服裝');
+  assert.equal(normalizePlaceType('女裝'), '服裝');
+  assert.equal(normalizePlaceType('逛街'), '景點');
 });
 
 test('bulk parser recognizes Dongdaemun aliases', () => {

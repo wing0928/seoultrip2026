@@ -5,7 +5,7 @@ import { GoogleRatingStrip, PlacePhotoStrip } from './GooglePlaceDetails.jsx';
 import { districtForArea } from '../data/districts.js';
 import { googleMapUrl } from '../utils/maps.js';
 import { supportsGoogleDetails } from '../utils/googlePlaces.js';
-import { formatPlaceName, formatPlaceType } from '../utils/placePresentation.js';
+import { formatPlaceName, formatPlaceType, normalizePlaceType } from '../utils/placePresentation.js';
 
 export default function PlaceCard({
   place,
@@ -16,13 +16,16 @@ export default function PlaceCard({
   googleStatus = '',
   showGoogleDetails = false,
   onOpenGoogle = null,
-  onAreaSelect = null
+  onAreaSelect = null,
+  collapseSummary = false
 }) {
   const displayName = formatPlaceName(place);
   const district = districtForArea(place.area);
   const supportsDetails = showGoogleDetails && supportsGoogleDetails(place);
   const AreaTag = onAreaSelect ? 'button' : 'span';
   const hasRoute = Boolean(place.routeUrl && !place.transportFromPrevious);
+  const placeType = normalizePlaceType(place.type);
+  const summary = [place.note, place.reason].filter(Boolean).join('\n');
 
   return (
     <article className={`place-card ${compact ? 'compact' : ''} ${visited ? 'visited' : ''}`}>
@@ -32,7 +35,7 @@ export default function PlaceCard({
             <p className="meta">{place.time || place.priority || place.period || place.source || '地點'}</p>
             <h3>{displayName}</h3>
           </div>
-          <span className={`type-pill type-${place.type}`}>{formatPlaceType(place.type)}</span>
+          <span className={`type-pill type-${placeType}`}>{formatPlaceType(placeType)}</span>
         </div>
         <AreaTag
           className={`place-area-tag ${onAreaSelect ? '' : 'static'}`}
@@ -43,9 +46,18 @@ export default function PlaceCard({
           #{district.name}
         </AreaTag>
         {supportsDetails && <PlacePhotoStrip details={googleDetails} status={googleStatus} onOpen={onOpenGoogle} />}
+        {place.clothingTags?.length > 0 && placeType === '服裝' && (
+          <div className="place-subtags" aria-label="服裝子標籤">
+            {place.clothingTags.map((tag) => <span key={tag}>#{tag}</span>)}
+          </div>
+        )}
         {place.recommendationSource && <p className="recommendation-source">推薦來源：{place.recommendationSource}</p>}
-        {place.note && <p>{place.note}</p>}
-        {place.reason && <p>{place.reason}</p>}
+        {summary && (collapseSummary ? (
+          <details className="place-summary-menu">
+            <summary>顯示簡介</summary>
+            <div className="place-summary-content">{summary.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}</div>
+          </details>
+        ) : summary.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>))}
         {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} />}
         <div className="button-row place-link-row">
           {hasRoute ? (
@@ -58,6 +70,7 @@ export default function PlaceCard({
             <div>
               {hasRoute && <NaverMapButton place={place} />}
               <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
+              {place.catchtableUrl && <LinkButton href={place.catchtableUrl}>CATCHTABLE</LinkButton>}
               {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
             </div>
           </details>

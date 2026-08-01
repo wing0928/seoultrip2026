@@ -4,12 +4,13 @@ import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import UndoToast from '../components/UndoToast.jsx';
 import { districtForArea, districts } from '../data/districts.js';
-import { PLACE_TYPES, WISHLIST_PRIORITIES } from '../data/placeTypes.js';
+import { CLOTHING_SUBTAGS, PLACE_TYPES, WISHLIST_PRIORITIES } from '../data/placeTypes.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { parseBulkPlaces } from '../utils/bulkPlaceParser.js';
 import { enrichPlaceIdentity, hasCurrentGooglePhotoUrls } from '../utils/googlePlaces.js';
 import { searchMapUrl } from '../utils/maps.js';
-import { formatPlaceName, formatPlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
+import { formatPlaceName, formatPlaceType, normalizePlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
+import { matchesWishlistQuery } from '../utils/wishlistSearch.js';
 import { extractPlacesFromScreenshots, screenshotPlacesToBulkText } from '../utils/screenshotPlaces.js';
 
 const emptyForm = {
@@ -18,9 +19,11 @@ const emptyForm = {
   type: '景點',
   area: '其他',
   sourceUrl: '',
+  catchtableUrl: '',
   recommendationSource: '',
   naverMapUrl: '',
   note: '',
+  clothingTags: [],
   priority: '想去',
   visited: false
 };
@@ -56,23 +59,13 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
 
   const filtered = wishlist.filter((item) => {
     const normalizedArea = districtForArea(item.area).name;
-    const searchText = [
-      item.name,
-      item.nameZh,
-      item.nameKo,
-      item.nameZhSimplified,
-      item.note,
-      item.recommendationSource,
-      item.area
-    ].filter(Boolean).join(' ').toLocaleLowerCase();
-    const normalizedQuery = query.trim().toLocaleLowerCase();
     const quickMatch = quickFilter === '全部'
       || (quickFilter === '必去' && item.priority === '必去')
       || (quickFilter === '未去' && !item.visited)
       || (quickFilter === '已去' && item.visited);
-    return (!normalizedQuery || searchText.includes(normalizedQuery))
+    return matchesWishlistQuery(item, query)
       && quickMatch
-      && (typeFilter === '全部' || item.type === typeFilter)
+      && (typeFilter === '全部' || normalizePlaceType(item.type) === typeFilter)
       && (areaFilter === '全部' || normalizedArea === areaFilter);
   });
 
@@ -81,6 +74,15 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
   const advancedFilterCount = Number(typeFilter !== '全部') + Number(areaFilter !== '全部');
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function toggleClothingTag(tag) {
+    setForm((current) => ({
+      ...current,
+      clothingTags: current.clothingTags.includes(tag)
+        ? current.clothingTags.filter((item) => item !== tag)
+        : [...current.clothingTags, tag]
+    }));
   }
 
   function selectFormArea(district) {
@@ -105,6 +107,8 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
 
     const item = {
       ...form,
+      type: normalizePlaceType(form.type),
+      clothingTags: Array.isArray(form.clothingTags) ? form.clothingTags : [],
       name: '',
       nameKo: form.nameKo.trim(),
       nameZh: form.nameZh.trim(),
@@ -122,6 +126,8 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
     setForm({
       ...emptyForm,
       ...item,
+      type: normalizePlaceType(item.type),
+      clothingTags: Array.isArray(item.clothingTags) ? item.clothingTags : [],
       area: district.name,
       nameKo: item.nameKo || item.koreanName || '',
       nameZh: item.nameZh || item.chineseName || item.name || '',
@@ -399,6 +405,17 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如：만배아리랑보쌈 본점" /></label>
               <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
               <label>優先度<select value={form.priority} onChange={(event) => updateField('priority', event.target.value)}>{WISHLIST_PRIORITIES.map((item) => <option key={item}>{item}</option>)}</select></label>
+              {normalizePlaceType(form.type) === '服裝' && (
+                <fieldset className="area-fieldset full clothing-subtag-fieldset">
+                  <legend>服裝子標籤（可複選）</legend>
+                  <div className="area-tag-options">
+                    {CLOTHING_SUBTAGS.map((tag) => (
+                      <button key={tag} type="button" className={(form.clothingTags || []).includes(tag) ? 'active' : ''} style={{ '--tag-color': '#6f668f' }} onClick={() => toggleClothingTag(tag)}>#{tag}</button>
+                    ))}
+                  </div>
+                  <p className="bulk-area-help">子標籤獨立儲存，不會改動你原本手動建立的地區 # 標籤。</p>
+                </fieldset>
+              )}
               <fieldset className="area-fieldset full">
                 <legend>地區</legend>
                 <div className="area-tag-options">
@@ -409,6 +426,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               </fieldset>
               <label>推薦來源<input value={form.recommendationSource} onChange={(event) => updateField('recommendationSource', event.target.value)} placeholder="例如：家人、Threads 帳號、旅遊部落客" /></label>
               <label>來源連結<input value={form.sourceUrl} onChange={(event) => updateField('sourceUrl', event.target.value)} placeholder="貼上 Reels / Threads / 網頁" /></label>
+              <label>CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
               <label className="full">Naver Map 連結<input value={form.naverMapUrl} onChange={(event) => updateField('naverMapUrl', event.target.value)} placeholder="可留空，自動用韓文名稱搜尋" /></label>
               <label className="full">備註<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="營業時間、必點、排隊提醒..." /></label>
               <button className="wide-button full" type="submit"><Plus size={18} /> {editingId ? '儲存修改' : '加入願望清單'}</button>

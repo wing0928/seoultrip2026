@@ -108,8 +108,7 @@ export function migrateWishlistAreas(items = []) {
 function inferLegacyShopType(item) {
   const text = `${item.nameZh || ''} ${item.nameKo || ''} ${item.note || ''}`;
   if (/選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i.test(text)) return '選物店';
-  if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
-  if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
+  if (/男裝|男士|男生|mens?\b|남성|남자|女裝|女士|女生|womens?\b|여성|여자|鞋子|shoes?\b/i.test(text)) return '服裝';
   return '其他';
 }
 

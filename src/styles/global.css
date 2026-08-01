@@ -305,10 +305,14 @@ dd {
   color: #6a5734;
 }
 
-.type-美食,
 .type-咖啡廳 {
   background: #f7e5df;
   color: #8a4d40;
+}
+
+.type-服裝 {
+  background: #eee8f7;
+  color: #5d527e;
 }
 
 .type-交通,
@@ -317,10 +321,67 @@ dd {
   color: #515b68;
 }
 
-.type-逛街,
-.type-拍照點 {
+.type-景點 {
   background: #e7f1f6;
   color: #315e73;
+}
+
+.place-subtags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 2px;
+}
+
+.place-subtags span {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #f1edf8;
+  color: #655985;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.place-summary-menu {
+  margin-top: 10px;
+}
+
+.place-summary-menu > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 7px 10px;
+  border: 1px solid #cce1ec;
+  border-radius: 10px;
+  background: var(--paper-2);
+  color: var(--blue-dark);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 850;
+  list-style: none;
+}
+
+.place-summary-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.place-summary-menu[open] > summary {
+  border-color: var(--blue-dark);
+}
+
+.place-summary-content {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7fafb;
+}
+
+.place-summary-content p {
+  margin: 0;
+}
+
+.place-summary-content p + p {
+  margin-top: 5px;
 }
 
 .button-row {

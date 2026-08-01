@@ -5,11 +5,12 @@ import LinkButton from '../components/LinkButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import UndoToast from '../components/UndoToast.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
-import { ITINERARY_PLACE_TYPES } from '../data/placeTypes.js';
+import { districts } from '../data/districts.js';
+import { CLOTHING_SUBTAGS, ITINERARY_PLACE_TYPES } from '../data/placeTypes.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
 import { routeMapUrl } from '../utils/maps.js';
-import { formatPlaceType } from '../utils/placePresentation.js';
+import { formatPlaceType, normalizePlaceType } from '../utils/placePresentation.js';
 
 const emptyStop = {
   timeHours: '',
@@ -23,11 +24,13 @@ const emptyStop = {
   note: '',
   recommendationSource: '',
   sourceUrl: '',
+  catchtableUrl: '',
   naverMapUrl: '',
   googleMapUrl: '',
   googlePlaceId: '',
   lookupName: '',
-  nameZhSimplified: ''
+  nameZhSimplified: '',
+  clothingTags: []
 };
 
 const emptyDay = {
@@ -103,7 +106,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       return;
     }
     setEditing({ mode: 'add', dayId, period, anchor, stopId: null });
-    setForm({ ...emptyStop, period });
+    setForm({ ...emptyStop, period, type: '', area: '' });
   }
 
   function startEdit(dayId, stop) {
@@ -120,16 +123,18 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       name: stop.name || '',
       nameKo: stop.nameKo || stop.koreanName || '',
       nameZh: stop.nameZh || stop.chineseName || '',
-      type: stop.type || '景點',
+      type: normalizePlaceType(stop.type || '景點'),
       area: stop.area || '',
       note: stop.note || '',
       recommendationSource: stop.recommendationSource || '',
       sourceUrl: stop.sourceUrl || '',
+      catchtableUrl: stop.catchtableUrl || '',
       naverMapUrl: stop.naverMapUrl || '',
       googleMapUrl: stop.googleMapUrl || '',
       googlePlaceId: stop.googlePlaceId || '',
       lookupName: stop.lookupName || '',
-      nameZhSimplified: stop.nameZhSimplified || ''
+      nameZhSimplified: stop.nameZhSimplified || '',
+      clothingTags: Array.isArray(stop.clothingTags) ? stop.clothingTags : []
     });
   }
 
@@ -175,6 +180,15 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function toggleClothingTag(tag) {
+    setForm((current) => ({
+      ...current,
+      clothingTags: (current.clothingTags || []).includes(tag)
+        ? current.clothingTags.filter((item) => item !== tag)
+        : [...(current.clothingTags || []), tag]
+    }));
+  }
+
   function applyWishlistItem(itemId) {
     if (!itemId) return;
     const item = wishlist.find((entry) => entry.id === itemId);
@@ -184,16 +198,18 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       name: item.name || item.nameZh || item.nameKo || '',
       nameKo: item.nameKo || item.koreanName || '',
       nameZh: item.nameZh || item.chineseName || '',
-      type: item.type || current.type,
-      area: item.area || '',
+      type: current.type || normalizePlaceType(item.type) || '景點',
+      area: current.area || item.area || '',
       note: item.note || item.reason || current.note,
       recommendationSource: item.recommendationSource || '',
       sourceUrl: item.sourceUrl || '',
+      catchtableUrl: item.catchtableUrl || '',
       naverMapUrl: item.naverMapUrl || '',
       googleMapUrl: item.googleMapUrl || '',
       googlePlaceId: item.googlePlaceId || '',
       lookupName: item.lookupName || '',
-      nameZhSimplified: item.nameZhSimplified || ''
+      nameZhSimplified: item.nameZhSimplified || '',
+      clothingTags: Array.isArray(item.clothingTags) ? item.clothingTags : []
     }));
   }
 
@@ -287,6 +303,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   function saveStop(event) {
     event.preventDefault();
     if (!editing || (!form.name.trim() && !form.nameKo.trim() && !form.nameZh.trim())) return;
+    if (editing.mode === 'add' && (!form.area || !form.type)) return;
     const nextDays = itinerary.map((day) => {
       if (day.id !== editing.dayId) return day;
       const { timeHours, timeMinutes, ...stopFields } = form;
@@ -297,8 +314,10 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
         name: form.name.trim() || form.nameZh.trim() || form.nameKo.trim(),
         nameKo: form.nameKo.trim(),
         nameZh: form.nameZh.trim(),
+        type: normalizePlaceType(form.type),
         area: form.area.trim() || '待確認',
-        note: form.note.trim()
+        note: form.note.trim(),
+        clothingTags: Array.isArray(form.clothingTags) ? form.clothingTags : []
       };
       if (editing.mode === 'edit') {
         return {
@@ -402,33 +421,66 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   }
 
   function stopEditor(title) {
+    const isAdding = editing?.mode === 'add';
+    const availableWishlist = wishlist.filter((item) => (
+      (!form.area || item.area === form.area)
+      && (!form.type || normalizePlaceType(item.type) === normalizePlaceType(form.type))
+    ));
     return (
       <div className="inline-editor">
         <div className="inline-editor-head solo">
           <h4>{title}</h4>
         </div>
         <form className="form-grid" onSubmit={saveStop}>
-          {editing?.mode === 'add' && (
-            <label className="full">
-              從願望清單帶入
-              <select onChange={(event) => applyWishlistItem(event.target.value)} defaultValue="" disabled={!wishlist.length}>
-                <option value="">{wishlist.length ? '選擇願望清單景點' : '願望清單目前沒有資料'}</option>
-                {wishlist.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name || item.nameZh || item.nameKo} {item.area ? `｜${item.area}` : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
+          {isAdding && (
+            <>
+              <label>
+                先選擇景點地區
+                <select value={form.area} onChange={(event) => updateField('area', event.target.value)}>
+                  <option value="">請先選擇地區</option>
+                  {districts.map((district) => <option key={district.id} value={district.name}>{district.name}</option>)}
+                </select>
+              </label>
+              <label>
+                再選擇景點類型
+                <select value={form.type} onChange={(event) => updateField('type', event.target.value)}>
+                  <option value="">請先選擇類型</option>
+                  {ITINERARY_PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}
+                </select>
+              </label>
+              <label className="full">
+                選擇詳細地點
+                <select onChange={(event) => applyWishlistItem(event.target.value)} defaultValue="" disabled={!form.area || !form.type || !availableWishlist.length}>
+                  <option value="">{!form.area || !form.type ? '先選地區與類型' : (availableWishlist.length ? '選擇願望清單景點' : '此地區與類型沒有符合景點')}</option>
+                  {availableWishlist.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name || item.nameZh || item.nameKo} {item.area ? `｜${item.area}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </>
           )}
           <label>時段<select value={form.period} onChange={(event) => updateField('period', event.target.value)}>{periods.map((period) => <option key={period}>{period}</option>)}</select></label>
           <label>時間<div className="clock-grid"><input aria-label="小時" inputMode="numeric" min="0" max="23" type="number" value={form.timeHours} onChange={(event) => updateField('timeHours', event.target.value)} placeholder="時" /><span>時</span><input aria-label="分鐘" inputMode="numeric" min="0" max="59" type="number" value={form.timeMinutes} onChange={(event) => updateField('timeMinutes', event.target.value)} placeholder="分" /><span>分</span></div></label>
           <label>主要顯示名稱<input value={form.name} onChange={(event) => updateField('name', event.target.value)} placeholder="例如 景福宮" /></label>
           <label>韓文名稱<input value={form.nameKo} onChange={(event) => updateField('nameKo', event.target.value)} placeholder="例如 경복궁" /></label>
           <label>中文名稱<input value={form.nameZh} onChange={(event) => updateField('nameZh', event.target.value)} placeholder="例如 景福宮" /></label>
-          <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{ITINERARY_PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>
-          <label>地區<input value={form.area} onChange={(event) => updateField('area', event.target.value)} placeholder="例如 弘大 / 聖水 / 漢南" /></label>
+          {!isAdding && <label>類型<select value={form.type} onChange={(event) => updateField('type', event.target.value)}>{ITINERARY_PLACE_TYPES.map((type) => <option key={type} value={type}>{formatPlaceType(type)}</option>)}</select></label>}
+          {!isAdding && <label>地區<input value={form.area} onChange={(event) => updateField('area', event.target.value)} placeholder="例如 弘大 / 聖水 / 漢南" /></label>}
+          {normalizePlaceType(form.type) === '服裝' && (
+            <fieldset className="area-fieldset full clothing-subtag-fieldset">
+              <legend>服裝子標籤（可複選）</legend>
+              <div className="area-tag-options">
+                {CLOTHING_SUBTAGS.map((tag) => (
+                  <button key={tag} type="button" className={(form.clothingTags || []).includes(tag) ? 'active' : ''} style={{ '--tag-color': '#6f668f' }} onClick={() => toggleClothingTag(tag)}>#{tag}</button>
+                ))}
+              </div>
+              <p className="bulk-area-help">不會改動原本手動建立的地區 # 標籤。</p>
+            </fieldset>
+          )}
           <label className="full">地點簡述<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="寫下必吃、交通、營業時間或排隊提醒" /></label>
+          <label className="full">CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>
         </form>
       </div>
@@ -582,6 +634,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
                         googleStatus={googleStatus[stop.id]}
                         showGoogleDetails={showsGoogleDetails(stop)}
                         onOpenGoogle={() => openGoogleDialog(stop)}
+                        collapseSummary
                         actions={<><button onClick={() => startEdit(selectedDay.id, stop)}>{isEditingThisStop ? <X size={17} /> : <Pencil size={17} />}{isEditingThisStop ? '關閉' : '編輯'}</button><button className="danger" onClick={() => deleteStop(selectedDay.id, stop.id)}><Trash2 size={17} /> 刪除</button></>}
                       />
                       {isEditingThisStop && stopEditor('編輯行程')}

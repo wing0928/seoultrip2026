@@ -1,4 +1,5 @@
 import { placeNameQuery, searchMapUrl } from './maps.js';
+import { normalizePlaceType } from './placePresentation.js';
 
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
 const FUNCTION_URL = String(
@@ -15,7 +16,8 @@ export const BUSINESS_LOOKUP_VERSION = 7;
 
 export function supportsGoogleDetails(place) {
   return place?.googleDetailsEligible === true ||
-    ['餐廳', '美食', '小吃', '咖啡廳', '男裝', '女裝', '選物店', '商店', '購物中心', '逛街'].includes(place?.type);
+    place?.type === '商店' ||
+    ['餐廳', '小吃', '咖啡廳', '服裝', '選物店', '購物中心'].includes(normalizePlaceType(place?.type));
 }
 
 export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
@@ -131,7 +133,7 @@ export async function enrichPlaceIdentity(place) {
     googlePlaceId: acceptedPlace ? resolution.googlePlaceId : (place.googlePlaceId || ''),
     googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : (place.googleMapUrl || ''),
     naverMapUrl: preservedNaverUrl(place) || searchMapUrl(lookupName),
-    type: resolution.type || normalizeLegacyShopType(place),
+    type: normalizePlaceType(resolution.type || normalizeLegacyShopType(place)),
     googleDetailsEligible: acceptedPlace ? resolution.reviewEligible === true : place.googleDetailsEligible === true,
     businessLookupVersion: acceptedPlace ? BUSINESS_LOOKUP_VERSION : (place.businessLookupVersion || 0),
     needsBusinessLookup: !acceptedPlace,
@@ -171,9 +173,8 @@ async function callGooglePlaces(body) {
 function normalizeLegacyShopType(place) {
   const text = `${place?.nameZh || ''} ${place?.nameKo || ''} ${place?.note || ''}`;
   if (/選物店|選品店|選物|選品|select\s*shop|concept\s*store|편집샵|셀렉트샵/i.test(text)) return '選物店';
-  if (/男裝|男士|男生|mens?\b|남성|남자/i.test(text)) return '男裝';
-  if (/女裝|女士|女生|womens?\b|여성|여자/i.test(text)) return '女裝';
-  return place?.type === '商店' ? '其他' : (place?.type || '其他');
+  if (/男裝|男士|男生|mens?\b|남성|남자|女裝|女士|女生|womens?\b|여성|여자|鞋子|shoes?\b/i.test(text)) return '服裝';
+  return normalizePlaceType(place?.type);
 }
 
 function preservedNaverUrl(place) {

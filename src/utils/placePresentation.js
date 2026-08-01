@@ -1,3 +1,5 @@
+import { PLACE_TYPES } from '../data/placeTypes.js';
+
 const TYPE_EMOJIS = {
   景點: '📍',
   餐廳: '🍽️',
@@ -6,6 +8,7 @@ const TYPE_EMOJIS = {
   咖啡廳: '☕',
   男裝: '👔',
   女裝: '👗',
+  服裝: '👕',
   選物店: '🛍️',
   購物中心: '🏬',
   逛街: '🚶',
@@ -13,6 +16,15 @@ const TYPE_EMOJIS = {
   交通: '🚇',
   休息: '🛏️',
   其他: '✨'
+};
+
+const LEGACY_TYPE_ALIASES = {
+  美食: '餐廳',
+  男裝: '服裝',
+  女裝: '服裝',
+  逛街: '景點',
+  拍照點: '景點',
+  商店: '其他'
 };
 
 const KNOWN_TRANSLATIONS = {
@@ -28,12 +40,21 @@ const KNOWN_TRANSLATIONS = {
 };
 
 export function placeTypeEmoji(type) {
-  return TYPE_EMOJIS[type] || '✨';
+  return TYPE_EMOJIS[normalizePlaceType(type)] || '✨';
 }
 
 export function formatPlaceType(type) {
-  const label = type || '其他';
+  const label = normalizePlaceType(type);
   return `${placeTypeEmoji(label)} ${label}`;
+}
+
+export function normalizePlaceType(type) {
+  const value = String(type || '其他').trim();
+  return LEGACY_TYPE_ALIASES[value] || value;
+}
+
+export function isPlaceType(type) {
+  return PLACE_TYPES.includes(normalizePlaceType(type));
 }
 
 export function formatPlaceName(place) {
