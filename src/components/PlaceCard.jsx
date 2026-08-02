@@ -1,5 +1,6 @@
 import { MoreHorizontal, Navigation } from 'lucide-react';
 import LinkButton from './LinkButton.jsx';
+import CatchtableButton from './CatchtableButton.jsx';
 import NaverMapButton from './NaverMapButton.jsx';
 import { GoogleRatingStrip, PlacePhotoStrip } from './GooglePlaceDetails.jsx';
 import { districtForArea } from '../data/districts.js';
@@ -82,7 +83,7 @@ export default function PlaceCard({
           ) : (
             <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
           )}
-          {catchtableUrl && <LinkButton href={catchtableUrl} sameTab>CATCHTABLE</LinkButton>}
+          {catchtableUrl && <CatchtableButton place={place} />}
           <details className="place-links-menu">
             <summary>其他連結</summary>
             <div>

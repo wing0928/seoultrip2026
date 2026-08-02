@@ -20,6 +20,29 @@ const NAVER_LINK_SEARCH_ALIASES = {
 
 const CATCHTABLE_PLACE_TYPES = new Set(['餐廳', '咖啡廳']);
 
+// CATCHTABLE's public search API only accepts requests from its own origin,
+// so a GitHub Pages PWA cannot resolve shop refs at runtime without a proxy.
+// Keep only refs that were verified against the public Global search results;
+// unknown names stay blank instead of opening a misleading home/search page.
+const VERIFIED_CATCHTABLE_SHOP_REFS = {
+  '명동교자 본점': 'PE2BfEBiOKSE4q7WFdiTnQ',
+  '리정원 명동점': 'VPnO7nDjLTfNHTQtXjWeFQ',
+  '조조칼국수 성수점': 'SQyTeZtEuRPp6TcJXG3Vxg',
+  '갈릭보이 광장시장': 'CrnI4nFED2w5ShhfFLYInQ',
+  '태초갈비 명동점': 'RlsUuwDX15ReptKeHGljFQ',
+  '무구옥': 'OILMXEC-HmIFsdWWGvg_1g',
+  '무구옥 성수점': 'YzmoeJ4mYjyGV_iBuHoNTw',
+  '해옫 연남': 'eGWflDGvzenF8-p_6GXP1w',
+  '스케줄성수': 'XGZ4Ldt3lvBgj3V-4rxIsQ',
+  '스케줄 성수': 'XGZ4Ldt3lvBgj3V-4rxIsQ',
+  '해정집 합정점': 'sMj4wR9dKng2KPbsi6UBbg',
+  '문츠바베큐': 'Zfq9Z-4ktXjebSlg3Iza0g',
+  '마리오네': 'KrLJIrsbt3LHyEAH0H5UAQ',
+  '몽탄': 'yh0PkP8ptvWlr62IVdqkxQ',
+  '꿉당 성수점': 'S76IxuEqzmOuMiZuvz_b1w',
+  '안주마을 통인점': 'b7wfUjvGX7AJ6Ipt2cCv9Q'
+};
+
 function withoutEnglishSeoul(query = '') {
   return String(query)
     .replace(/\bSeoul\b/gi, ' ')
@@ -176,10 +199,9 @@ export function placeSearchQuery(place) {
 }
 
 /**
- * Use a saved CATCHTABLE listing when available. Otherwise generate a
- * CATCHTABLE Global's App-Link-safe home entry for restaurants and cafes
- * without persisting it as a direct listing URL. The search term is carried
- * as a query parameter because `/search/` is not a public App route.
+ * Use a saved CATCHTABLE listing when available. For generated links, only
+ * return a verified shop route; unknown names stay blank instead of opening
+ * the CATCHTABLE home page.
  */
 export function catchtableUrlForPlace(place) {
   const directUrl = String(place?.catchtableUrl || '').trim();
@@ -191,8 +213,28 @@ export function catchtableUrlForPlace(place) {
   const query = catchtableSearchQuery(place);
   if (!query) return '';
 
-  const params = new URLSearchParams({ keyword: query });
-  return `${CATCHTABLE_GLOBAL_HOME}?${params.toString()}`;
+  const shopRef = VERIFIED_CATCHTABLE_SHOP_REFS[query];
+  if (shopRef) return `${CATCHTABLE_GLOBAL_HOME}shop/${encodeURIComponent(shopRef)}`;
+
+  return '';
+}
+
+/**
+ * Resolve a food place to CATCHTABLE Global's in-app shop route. This uses a
+ * checked local allowlist because CATCHTABLE's public endpoint rejects browser
+ * requests from GitHub Pages (CORS); unknown places intentionally return blank.
+ */
+export async function resolveCatchtableUrlForPlace(place) {
+  const directUrl = String(place?.catchtableUrl || '').trim();
+  if (directUrl) return directUrl;
+
+  const type = normalizePlaceType(place?.type);
+  if (!CATCHTABLE_PLACE_TYPES.has(type)) return '';
+
+  const query = catchtableSearchQuery(place);
+  if (!query) return '';
+  const shopRef = VERIFIED_CATCHTABLE_SHOP_REFS[query];
+  return shopRef ? `${CATCHTABLE_GLOBAL_HOME}shop/${encodeURIComponent(shopRef)}` : '';
 }
 
 function catchtableSearchQuery(place) {

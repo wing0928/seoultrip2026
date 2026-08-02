@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, ExternalLink, LocateFixed, MapPin } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
+import CatchtableButton from '../components/CatchtableButton.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { PLACE_TYPES } from '../data/placeTypes.js';
 import { getGoogleMapLocations, googlePlacesConfigured } from '../utils/googlePlaces.js';
@@ -440,7 +441,7 @@ export default function MapPage({ wishlist = [] }) {
                       <div className="map-place-links">
                         <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
                         <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
-                        {catchtableUrl && <a href={catchtableUrl}>CATCHTABLE</a>}
+                        {catchtableUrl && <CatchtableButton place={place} className="map-place-link" />}
                         {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
                       </div>
                     </div>

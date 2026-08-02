@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
-import { catchtableUrlForPlace, naverMapRouteAppUrl, naverMapRouteUrl, routeMapUrl } from '../src/utils/maps.js';
+import { catchtableUrlForPlace, naverMapRouteAppUrl, naverMapRouteUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { migrateWishlist } from '../src/utils/storage.js';
 import { deriveTripDuration, findNextStop, getSeoulNow, selectTripDay } from '../src/utils/tripTime.js';
@@ -101,19 +101,23 @@ test('Naver route links use the current location as origin and a clean Korean de
   assert.doesNotMatch(naverMapRouteUrl(place, location), /大眾交通/);
 });
 
-test('CATCHTABLE links use saved direct URLs or food and cafe search pages', () => {
-  const searchUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
-  assert.equal(searchUrl.origin, 'https://www.catchtable.net');
-  assert.equal(searchUrl.pathname, '/');
-  assert.equal(searchUrl.searchParams.get('keyword'), '몽탄');
-  assert.equal(searchUrl.searchParams.get('keyword'), '몽탄');
-  assert.doesNotMatch(searchUrl.search, /삼각지/);
-  const cafeUrl = new URL(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월', area: '明洞' }));
-  assert.equal(cafeUrl.searchParams.get('keyword'), '카페 오월');
-  assert.doesNotMatch(cafeUrl.search, /明洞/);
+test('CATCHTABLE links use saved direct URLs or verified food and cafe shop pages', () => {
+  const shopUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
+  assert.equal(shopUrl.origin, 'https://www.catchtable.net');
+  assert.equal(shopUrl.pathname, '/shop/yh0PkP8ptvWlr62IVdqkxQ');
+  assert.equal(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월', area: '明洞' }), '');
   assert.equal(catchtableUrlForPlace({ type: '景點', nameZh: '景福宮' }), '');
   assert.equal(catchtableUrlForPlace({ type: '餐廳', nameZh: '夢炭', area: '明洞' }), '');
   assert.equal(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', catchtableUrl: 'https://app.catchtable.co.kr/ct/shop/example' }), 'https://app.catchtable.co.kr/ct/shop/example');
+});
+
+test('verified CATCHTABLE listings resolve to an app-safe shop route', async () => {
+  assert.equal(
+    await resolveCatchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄' }),
+    'https://www.catchtable.net/shop/yh0PkP8ptvWlr62IVdqkxQ'
+  );
+  assert.equal(await resolveCatchtableUrlForPlace({ type: '餐廳', nameKo: '不存在的店' }), '');
+  assert.equal(await resolveCatchtableUrlForPlace({ type: '景點', nameKo: '몽탄' }), '');
 });
 
 test('distance formatting keeps short distances readable', () => {

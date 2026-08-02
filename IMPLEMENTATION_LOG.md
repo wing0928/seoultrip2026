@@ -52,6 +52,12 @@
 - CATCHTABLE 按鈕改為同一分頁導向，並將自動搜尋改用 CATCHTABLE Global 的 App-Link-safe 首頁 `www.catchtable.net/?keyword=...`；避免不支援的 `/search/` 路由造成 App 顯示 Page Not Found。
 - Validation: `npm.cmd test` (30 passed) and `npm.cmd run build` (success).
 
+### CATCHTABLE shop route correction
+
+- CATCHTABLE 按鈕改為直接導向已核對的 Global 店家頁 `https://www.catchtable.net/shop/<shopRef>`，不再先開啟首頁。
+- GitHub Pages 無法直接呼叫 CATCHTABLE 搜尋 API（跨來源限制），因此未核對到店家時維持空白；不建立可能錯誤的假連結。
+- Validation: `npm.cmd test` (31 passed) and `npm.cmd run build` (success).
+
 - 頁首新增「重新整理」按鈕，使用瀏覽器重新載入目前頁面，不會清除行程、願望清單或其他 localStorage 資料。
 
 ### 驗證（重新整理按鈕）
