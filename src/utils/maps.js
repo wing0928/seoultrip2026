@@ -3,7 +3,7 @@ import { normalizePlaceType } from './placePresentation.js';
 const NAVER_MAP_SEARCH = 'https://map.naver.com/p/search/';
 const NAVER_MAP_DIRECTIONS = 'https://map.naver.com/p/directions/-/';
 const GOOGLE_MAP_SEARCH = 'https://www.google.com/maps/search/?api=1&query=';
-const CATCHTABLE_GLOBAL_SEARCH = 'https://www.catchtable.net/search';
+const CATCHTABLE_GLOBAL_HOME = 'https://www.catchtable.net/';
 const NAVER_MAP_SCHEME = 'nmap://search';
 const NAVER_MAP_ROUTE_SCHEME = 'nmap://route/public';
 const NAVER_MAP_NAVIGATION_SCHEME = 'nmap://navigation';
@@ -177,8 +177,9 @@ export function placeSearchQuery(place) {
 
 /**
  * Use a saved CATCHTABLE listing when available. Otherwise generate a
- * CATCHTABLE search page for restaurants and cafes without persisting it as
- * a direct listing URL.
+ * CATCHTABLE Global's App-Link-safe home entry for restaurants and cafes
+ * without persisting it as a direct listing URL. The search term is carried
+ * as a query parameter because `/search/` is not a public App route.
  */
 export function catchtableUrlForPlace(place) {
   const directUrl = String(place?.catchtableUrl || '').trim();
@@ -191,7 +192,7 @@ export function catchtableUrlForPlace(place) {
   if (!query) return '';
 
   const params = new URLSearchParams({ keyword: query });
-  return `${CATCHTABLE_GLOBAL_SEARCH}?${params.toString()}`;
+  return `${CATCHTABLE_GLOBAL_HOME}?${params.toString()}`;
 }
 
 function catchtableSearchQuery(place) {

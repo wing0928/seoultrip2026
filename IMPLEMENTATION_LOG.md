@@ -49,7 +49,7 @@
 - Restaurant and cafe wishlist cards now show a CATCHTABLE button. Saved `catchtableUrl` values remain direct links; otherwise the app opens a CATCHTABLE site search.
 - Search URLs are generated at render time and are not persisted as fake listings. Other place types stay blank, and an unmatched CATCHTABLE search remains an empty result.
 - CATCHTABLE 搜尋改為只帶韓文／拉丁店名，不再把中文店名或中文地區附加到搜尋參數；沒有可辨識名稱時維持空白。
-- CATCHTABLE 按鈕改為同一分頁導向，並將自動搜尋改用 CATCHTABLE Global 的 `www.catchtable.net/search`，讓 iOS Universal Link／Android App Link 有機會直接交給 Global App；未安裝 App 時仍會開啟網頁搜尋。
+- CATCHTABLE 按鈕改為同一分頁導向，並將自動搜尋改用 CATCHTABLE Global 的 App-Link-safe 首頁 `www.catchtable.net/?keyword=...`；避免不支援的 `/search/` 路由造成 App 顯示 Page Not Found。
 - Validation: `npm.cmd test` (30 passed) and `npm.cmd run build` (success).
 
 - 頁首新增「重新整理」按鈕，使用瀏覽器重新載入目前頁面，不會清除行程、願望清單或其他 localStorage 資料。
