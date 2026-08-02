@@ -125,6 +125,7 @@ export async function enrichPlaceIdentity(place) {
   const resolution = await resolvePlaceIdentity(place);
   const lookupName = resolution.nameKo || resolution.nameZhSimplified || place.nameZh || place.nameKo;
   const acceptedPlace = Boolean(resolution.googlePlaceId);
+  const resolvedType = normalizePlaceType(resolution.type || normalizeLegacyShopType(place));
   return {
     ...place,
     nameKo: resolution.nameKo || place.nameKo || '',
@@ -133,7 +134,10 @@ export async function enrichPlaceIdentity(place) {
     googlePlaceId: acceptedPlace ? resolution.googlePlaceId : (place.googlePlaceId || ''),
     googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : (place.googleMapUrl || ''),
     naverMapUrl: preservedNaverUrl(place) || searchMapUrl(lookupName),
-    type: normalizePlaceType(resolution.type || normalizeLegacyShopType(place)),
+    // A type selected in the editor is the user's source of truth. Google may
+    // still refresh names, maps and reviews, but it must not overwrite that
+    // explicit choice on the next background refresh.
+    type: place.typeManuallySet ? normalizePlaceType(place.type) : resolvedType,
     googleDetailsEligible: acceptedPlace ? resolution.reviewEligible === true : place.googleDetailsEligible === true,
     businessLookupVersion: acceptedPlace ? BUSINESS_LOOKUP_VERSION : (place.businessLookupVersion || 0),
     needsBusinessLookup: !acceptedPlace,

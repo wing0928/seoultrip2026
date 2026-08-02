@@ -84,10 +84,12 @@ export function migrateWishlist(items = []) {
     if (!isBulkPlace) return migrateLegacyWishlistDescription(item);
 
     const wasLegacyShop = item.type === '商店';
-    const inferredType = inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource);
+    const type = item.typeManuallySet
+      ? item.type
+      : (wasLegacyShop ? inferLegacyShopType(item) : inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource));
     return migrateLegacyWishlistDescription({
       ...item,
-      type: wasLegacyShop ? inferLegacyShopType(item) : inferredType,
+      type,
       needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
     });
   });
@@ -107,7 +109,7 @@ export function migrateWishlistAreas(items = []) {
     const area = (!item.area || ['其他', '待確認'].includes(item.area)) && /東大門|동대문|\bDDP\b/i.test(placeNames)
       ? '東大門'
       : item.area;
-    const type = isDongdaemunMarket && item.type === '餐廳' ? '景點' : item.type;
+    const type = isDongdaemunMarket && item.type === '餐廳' && !item.typeManuallySet ? '景點' : item.type;
     return area === item.area && type === item.type ? item : { ...item, area, type };
   });
 }

@@ -131,6 +131,36 @@ test('wishlist migration moves existing Dongdaemun places out of Other', () => {
   assert.equal(locallyLoadedPlace.type, '景點');
 });
 
+test('wishlist migration keeps a manually selected type', () => {
+  const [place] = migrateWishlist([{
+    id: 'manual-type',
+    nameZh: '手動分類店家',
+    nameKo: '수동 분류 가게',
+    type: '服裝',
+    typeManuallySet: true,
+    bulkImported: true,
+    note: '晚餐推薦',
+    recommendationSource: '家人',
+    sourceUrl: 'https://example.com/recommendation',
+    naverMapUrl: 'https://naver.me/example'
+  }]);
+  assert.equal(place.type, '服裝');
+  assert.equal(place.typeManuallySet, true);
+});
+
+test('manual type prevents the Dongdaemun area migration from changing it', () => {
+  const [place] = migrateWishlistAreas([{
+    id: 'manual-dongdaemun-type',
+    nameZh: '東大門綜合市場',
+    nameKo: '동대문종합시장',
+    area: '其他',
+    type: '餐廳',
+    typeManuallySet: true
+  }]);
+  assert.equal(place.area, '東大門');
+  assert.equal(place.type, '餐廳');
+});
+
 test('screenshot parser prefers a labelled store name and keeps a short description', () => {
   const place = parseScreenshotText(`
     10:42

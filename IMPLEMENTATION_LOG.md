@@ -44,6 +44,12 @@
 
 ## 2026-08-02
 
+### 手動景點類型優先
+
+- 願望清單編輯器儲存時會記錄 `typeManuallySet`，之後 Google 商家背景更新只更新名稱、地圖與評論資料，不會覆蓋手動選擇的景點類型。
+- 願望清單載入、家庭同步與東大門舊資料遷移也會保留手動類型。
+- Validation: `npm.cmd test` (33 passed) and `npm.cmd run build` (success).
+
 ### CATCHTABLE restaurant and cafe buttons
 
 - Restaurant and cafe wishlist cards now show a CATCHTABLE button. Saved `catchtableUrl` values remain direct links; otherwise the app opens a CATCHTABLE site search.

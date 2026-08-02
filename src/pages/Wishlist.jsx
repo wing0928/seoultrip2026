@@ -109,6 +109,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
     const item = {
       ...form,
       type: normalizePlaceType(form.type),
+      typeManuallySet: true,
       clothingTags: Array.isArray(form.clothingTags) ? form.clothingTags : [],
       name: '',
       nameKo: form.nameKo.trim(),
