@@ -187,7 +187,7 @@ export function catchtableUrlForPlace(place) {
   const type = normalizePlaceType(place?.type);
   if (!CATCHTABLE_PLACE_TYPES.has(type)) return '';
 
-  const query = placeSearchQuery(place);
+  const query = catchtableSearchQuery(place);
   if (!query) return '';
 
   const params = new URLSearchParams({
@@ -198,6 +198,13 @@ export function catchtableUrlForPlace(place) {
     showTabs: 'true'
   });
   return `${CATCHTABLE_MAP_SEARCH}?${params.toString()}`;
+}
+
+function catchtableSearchQuery(place) {
+  const candidates = [place?.nameKo, place?.koreanName, place?.lookupName, place?.name, place?.title];
+  return candidates
+    .map((value) => withoutEnglishSeoul(value || ''))
+    .find((value) => value && !/[\u3400-\u9fff]/.test(value)) || '';
 }
 
 function naverSearchName(place) {

@@ -105,9 +105,13 @@ test('CATCHTABLE links use saved direct URLs or food and cafe search pages', () 
   const searchUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
   assert.equal(searchUrl.origin, 'https://app.catchtable.co.kr');
   assert.equal(searchUrl.pathname, '/ct/map/COMMON');
-  assert.match(searchUrl.searchParams.get('keyword'), /몽탄/);
-  assert.match(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월' }), /keyword=%EC%B9%B4%ED%8E%98/);
+  assert.equal(searchUrl.searchParams.get('keyword'), '몽탄');
+  assert.doesNotMatch(searchUrl.search, /삼각지/);
+  const cafeUrl = new URL(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월', area: '明洞' }));
+  assert.equal(cafeUrl.searchParams.get('keyword'), '카페 오월');
+  assert.doesNotMatch(cafeUrl.search, /明洞/);
   assert.equal(catchtableUrlForPlace({ type: '景點', nameZh: '景福宮' }), '');
+  assert.equal(catchtableUrlForPlace({ type: '餐廳', nameZh: '夢炭', area: '明洞' }), '');
   assert.equal(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', catchtableUrl: 'https://app.catchtable.co.kr/ct/shop/example' }), 'https://app.catchtable.co.kr/ct/shop/example');
 });
 
