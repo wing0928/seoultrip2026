@@ -3,7 +3,7 @@ import { normalizePlaceType } from './placePresentation.js';
 const NAVER_MAP_SEARCH = 'https://map.naver.com/p/search/';
 const NAVER_MAP_DIRECTIONS = 'https://map.naver.com/p/directions/-/';
 const GOOGLE_MAP_SEARCH = 'https://www.google.com/maps/search/?api=1&query=';
-const CATCHTABLE_MAP_SEARCH = 'https://app.catchtable.co.kr/ct/map/COMMON';
+const CATCHTABLE_GLOBAL_SEARCH = 'https://www.catchtable.net/search';
 const NAVER_MAP_SCHEME = 'nmap://search';
 const NAVER_MAP_ROUTE_SCHEME = 'nmap://route/public';
 const NAVER_MAP_NAVIGATION_SCHEME = 'nmap://navigation';
@@ -190,14 +190,8 @@ export function catchtableUrlForPlace(place) {
   const query = catchtableSearchQuery(place);
   if (!query) return '';
 
-  const params = new URLSearchParams({
-    bottomSheetHeightType: 'HALF',
-    keyword: query,
-    keywordSearch: query,
-    serviceType: 'INTEGRATION',
-    showTabs: 'true'
-  });
-  return `${CATCHTABLE_MAP_SEARCH}?${params.toString()}`;
+  const params = new URLSearchParams({ keyword: query });
+  return `${CATCHTABLE_GLOBAL_SEARCH}?${params.toString()}`;
 }
 
 function catchtableSearchQuery(place) {

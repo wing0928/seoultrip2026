@@ -103,8 +103,8 @@ test('Naver route links use the current location as origin and a clean Korean de
 
 test('CATCHTABLE links use saved direct URLs or food and cafe search pages', () => {
   const searchUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
-  assert.equal(searchUrl.origin, 'https://app.catchtable.co.kr');
-  assert.equal(searchUrl.pathname, '/ct/map/COMMON');
+  assert.equal(searchUrl.origin, 'https://www.catchtable.net');
+  assert.equal(searchUrl.pathname, '/search');
   assert.equal(searchUrl.searchParams.get('keyword'), '몽탄');
   assert.doesNotMatch(searchUrl.search, /삼각지/);
   const cafeUrl = new URL(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월', area: '明洞' }));
