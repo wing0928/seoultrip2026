@@ -430,7 +430,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               <label>CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
               <label className="full">Naver Map 連結<input value={form.naverMapUrl} onChange={(event) => updateField('naverMapUrl', event.target.value)} placeholder="可留空，自動用韓文名稱搜尋" /></label>
               <label className="full">景點簡介<textarea value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="例如：適合逛街、拍照或安排在晚餐前。" /></label>
-              <label className="full">備註<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="營業時間、必點、排隊提醒..." /></label>
+              <label className="full">景點備註（選填）<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="想補充的營業時間、必點或排隊提醒..." /></label>
               <button className="wide-button full" type="submit"><Plus size={18} /> {editingId ? '儲存修改' : '加入願望清單'}</button>
             </form>
           </section>

@@ -73,7 +73,7 @@ export function loadWishlist() {
 export function migrateWishlist(items = []) {
   return migrateWishlistAreas(items).map((item) => {
     const placeNames = `${item.nameZh || item.chineseName || item.name || ''} ${item.nameKo || item.koreanName || ''}`;
-    if (/東大門綜合市場|동대문종합시장/i.test(placeNames)) return item;
+    if (/東大門綜合市場|동대문종합시장/i.test(placeNames)) return migrateLegacyWishlistDescription(item);
 
     const isBulkPlace = item.bulkImported || (
       item.note &&
@@ -81,16 +81,23 @@ export function migrateWishlist(items = []) {
       item.sourceUrl &&
       (item.naverMapUrl || item.googleMapUrl)
     );
-    if (!isBulkPlace) return item;
+    if (!isBulkPlace) return migrateLegacyWishlistDescription(item);
 
     const wasLegacyShop = item.type === '商店';
     const inferredType = inferPlaceType(item.note, item.nameZh || item.nameKo || item.name, item.recommendationSource);
-    return {
+    return migrateLegacyWishlistDescription({
       ...item,
       type: wasLegacyShop ? inferLegacyShopType(item) : inferredType,
       needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
-    };
+    });
   });
+}
+
+function migrateLegacyWishlistDescription(item) {
+  const description = String(item.description || '').trim();
+  const note = String(item.note || '').trim();
+  if (description || !note) return item;
+  return { ...item, description: note, note: '' };
 }
 
 export function migrateWishlistAreas(items = []) {

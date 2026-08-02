@@ -4,6 +4,7 @@ import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
 import { naverMapRouteAppUrl, naverMapRouteUrl, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
+import { migrateWishlist } from '../src/utils/storage.js';
 import { deriveTripDuration, findNextStop, getSeoulNow, selectTripDay } from '../src/utils/tripTime.js';
 
 test('Seoul clock uses Asia/Seoul instead of the device timezone', () => {
@@ -39,6 +40,16 @@ test('persisted itinerary keeps a separate place description beside the itinerar
   const persisted = toPersistedItinerary(withDescription);
   assert.equal(persisted[0].stops[0].note, itineraryDays[0].stops[0].note);
   assert.equal(persisted[0].stops[0].description, '國際航班出發航廈。');
+});
+
+test('legacy wishlist notes migrate to place descriptions without touching itinerary notes', () => {
+  const [migrated] = migrateWishlist([{ id: 'legacy-wish', nameZh: '測試景點', note: '原本的景點介紹' }]);
+  assert.equal(migrated.description, '原本的景點介紹');
+  assert.equal(migrated.note, '');
+
+  const [alreadySplit] = migrateWishlist([{ id: 'split-wish', nameZh: '已分開', description: '景點介紹', note: '景點備註' }]);
+  assert.equal(alreadySplit.description, '景點介紹');
+  assert.equal(alreadySplit.note, '景點備註');
 });
 
 test('consecutive entries at the same place do not offer a route to themselves', () => {
