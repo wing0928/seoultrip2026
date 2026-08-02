@@ -19,6 +19,7 @@ const emptyStop = {
   name: '',
   nameKo: '',
   nameZh: '',
+  description: '',
   type: '景點',
   area: '',
   note: '',
@@ -123,6 +124,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       name: stop.name || '',
       nameKo: stop.nameKo || stop.koreanName || '',
       nameZh: stop.nameZh || stop.chineseName || '',
+      description: stop.description || stop.reason || '',
       type: normalizePlaceType(stop.type || '景點'),
       area: stop.area || '',
       note: stop.note || '',
@@ -198,6 +200,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       name: item.name || item.nameZh || item.nameKo || '',
       nameKo: item.nameKo || item.koreanName || '',
       nameZh: item.nameZh || item.chineseName || '',
+      description: item.description || item.reason || current.description,
       type: current.type || normalizePlaceType(item.type) || '景點',
       area: current.area || item.area || '',
       note: item.note || item.reason || current.note,
@@ -314,6 +317,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
         name: form.name.trim() || form.nameZh.trim() || form.nameKo.trim(),
         nameKo: form.nameKo.trim(),
         nameZh: form.nameZh.trim(),
+        description: form.description.trim(),
         type: normalizePlaceType(form.type),
         area: form.area.trim() || '待確認',
         note: form.note.trim(),
@@ -479,6 +483,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
               <p className="bulk-area-help">不會改動原本手動建立的地區 # 標籤。</p>
             </fieldset>
           )}
+          <label className="full">景點簡介<textarea value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="例如：韓屋街區，適合白天散步與拍照。" /></label>
           <label className="full">備註<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="儲存行程細項、必吃、營業時間或排隊提醒" /></label>
           <label className="full">CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>

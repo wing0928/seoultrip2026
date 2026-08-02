@@ -32,6 +32,15 @@ test('persisted itinerary removes generated map URLs without removing places', (
   assert.equal('routeUrl' in persisted[0].stops[0], false);
 });
 
+test('persisted itinerary keeps a separate place description beside the itinerary note', () => {
+  const withDescription = itineraryDays.map((day, dayIndex) => dayIndex === 0
+    ? { ...day, stops: day.stops.map((stop, stopIndex) => stopIndex === 0 ? { ...stop, description: '國際航班出發航廈。' } : stop) }
+    : day);
+  const persisted = toPersistedItinerary(withDescription);
+  assert.equal(persisted[0].stops[0].note, itineraryDays[0].stops[0].note);
+  assert.equal(persisted[0].stops[0].description, '國際航班出發航廈。');
+});
+
 test('consecutive entries at the same place do not offer a route to themselves', () => {
   assert.equal(itineraryDays[0].stops[3].routeUrl, '');
   assert.ok(itineraryDays[0].stops[3].mapUrl);

@@ -25,7 +25,11 @@ export default function PlaceCard({
   const AreaTag = onAreaSelect ? 'button' : 'span';
   const hasRoute = Boolean(place.routeUrl && !place.transportFromPrevious);
   const placeType = normalizePlaceType(place.type);
-  const summary = [place.note, place.reason].filter(Boolean).join('\n');
+  const note = String(place.note || '').trim();
+  const description = [place.description, place.reason]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean)
+    .join('\n');
 
   return (
     <article className={`place-card ${compact ? 'compact' : ''} ${visited ? 'visited' : ''}`}>
@@ -52,12 +56,24 @@ export default function PlaceCard({
           </div>
         )}
         {place.recommendationSource && <p className="recommendation-source">推薦來源：{place.recommendationSource}</p>}
-        {summary && (collapseSummary ? (
-          <details className="place-summary-menu">
-            <summary>顯示簡介</summary>
-            <div className="place-summary-content">{summary.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}</div>
-          </details>
-        ) : summary.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>))}
+        {collapseSummary ? (
+          <>
+            {note && (
+              <div className="place-note-content">
+                <strong>行程備註</strong>
+                {note.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
+              </div>
+            )}
+            {description && (
+              <details className="place-summary-menu">
+                <summary>顯示景點簡介</summary>
+                <div className="place-summary-content">{description.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}</div>
+              </details>
+            )}
+          </>
+        ) : (
+          [note, description].filter(Boolean).flatMap((text) => text.split('\n')).map((line, index) => <p key={`${line}-${index}`}>{line}</p>)
+        )}
         {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} />}
         <div className="button-row place-link-row">
           {hasRoute ? (

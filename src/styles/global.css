@@ -346,6 +346,28 @@ dd {
   margin-top: 10px;
 }
 
+.place-note-content {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f7fafb;
+}
+
+.place-note-content strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-soft);
+  font-size: 0.76rem;
+}
+
+.place-note-content p {
+  margin: 0;
+}
+
+.place-note-content p + p {
+  margin-top: 5px;
+}
+
 .place-summary-menu > summary {
   display: inline-flex;
   align-items: center;
