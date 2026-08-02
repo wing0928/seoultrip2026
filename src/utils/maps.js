@@ -40,7 +40,9 @@ const VERIFIED_CATCHTABLE_SHOP_REFS = {
   '마리오네': 'KrLJIrsbt3LHyEAH0H5UAQ',
   '몽탄': 'yh0PkP8ptvWlr62IVdqkxQ',
   '꿉당 성수점': 'S76IxuEqzmOuMiZuvz_b1w',
-  '안주마을 통인점': 'b7wfUjvGX7AJ6Ipt2cCv9Q'
+  '안주마을 통인점': 'b7wfUjvGX7AJ6Ipt2cCv9Q',
+  // Yeonnam's Jo&Dawson Tearoom matches the existing wishlist cafe.
+  '조앤도슨': 'sVwsMyhx1Tt0oOTUgvWYyg'
 };
 
 function withoutEnglishSeoul(query = '') {

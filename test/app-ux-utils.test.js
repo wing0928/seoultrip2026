@@ -106,6 +106,11 @@ test('CATCHTABLE links use saved direct URLs or verified food and cafe shop page
   const shopUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
   assert.equal(shopUrl.origin, 'https://www.catchtable.net');
   assert.equal(shopUrl.pathname, '/shop/yh0PkP8ptvWlr62IVdqkxQ');
+  const cafe = { type: '咖啡廳', nameKo: '조앤도슨', area: '弘大商圈', clothingTags: ['女裝'], tags: ['家庭收藏'] };
+  const cafeBefore = JSON.stringify(cafe);
+  const cafeUrl = new URL(catchtableUrlForPlace(cafe));
+  assert.equal(cafeUrl.pathname, '/shop/sVwsMyhx1Tt0oOTUgvWYyg');
+  assert.equal(JSON.stringify(cafe), cafeBefore);
   assert.equal(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월', area: '明洞' }), '');
   assert.equal(catchtableUrlForPlace({ type: '景點', nameZh: '景福宮' }), '');
   assert.equal(catchtableUrlForPlace({ type: '餐廳', nameZh: '夢炭', area: '明洞' }), '');

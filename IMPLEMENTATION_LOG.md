@@ -65,7 +65,8 @@
 
 - CATCHTABLE 按鈕改為直接導向已核對的 Global 店家頁 `https://www.catchtable.net/shop/<shopRef>`，不再先開啟首頁。
 - GitHub Pages 無法直接呼叫 CATCHTABLE 搜尋 API（跨來源限制），因此未核對到店家時維持空白；不建立可能錯誤的假連結。
-- Validation: `npm.cmd test` (31 passed) and `npm.cmd run build` (success).
+- 新增已核對的弘大咖啡廳「조앤도슨」店家頁；連結產生為純函式，不會修改地區、服裝子標籤或其他既有標籤。
+- Validation: `npm.cmd test` (35 passed) and `npm.cmd run build` (success).
 
 - 頁首新增「重新整理」按鈕，使用瀏覽器重新載入目前頁面，不會清除行程、願望清單或其他 localStorage 資料。
 
