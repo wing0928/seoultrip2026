@@ -50,6 +50,7 @@
 - 願望清單載入、家庭同步與東大門舊資料遷移也會保留手動類型。
 - 既有非大量匯入且已有類型的願望景點會在首次載入時自動補上保護標記，無需逐筆重設。
 - 背景商家查詢完成時會檢查最新資料；若使用者已在查詢期間改過類型，保留最新人工選擇，避免舊回應覆蓋。
+- Service worker 導覽請求改為每次重新驗證，並更新 cache 版本，避免 PWA 仍載入舊版 lazy chunk 而看不到最新分類修正。
 - Validation: `npm.cmd test` (35 passed) and `npm.cmd run build` (success).
 
 ### CATCHTABLE restaurant and cafe buttons

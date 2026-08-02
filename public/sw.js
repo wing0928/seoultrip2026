@@ -1,4 +1,4 @@
-const CACHE_NAME = 'seoul-trip-shell-v4';
+const CACHE_NAME = 'seoul-trip-shell-v5';
 const APP_SHELL = [
   './manifest.webmanifest',
   './apple-touch-icon.png',
@@ -44,7 +44,9 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
+      // Always revalidate the document so an installed PWA cannot keep an
+      // old hashed entry chunk after a new GitHub Pages deployment.
+      fetch(request, { cache: 'no-store' })
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put('./', copy));
