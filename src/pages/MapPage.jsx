@@ -440,7 +440,7 @@ export default function MapPage({ wishlist = [] }) {
                       <div className="map-place-links">
                         <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
                         <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
-                        {catchtableUrl && <a href={catchtableUrl} target="_blank" rel="noreferrer">CATCHTABLE</a>}
+                        {catchtableUrl && <a href={catchtableUrl}>CATCHTABLE</a>}
                         {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
                       </div>
                     </div>

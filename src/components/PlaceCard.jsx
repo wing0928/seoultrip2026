@@ -82,7 +82,7 @@ export default function PlaceCard({
           ) : (
             <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
           )}
-          {catchtableUrl && <LinkButton href={catchtableUrl}>CATCHTABLE</LinkButton>}
+          {catchtableUrl && <LinkButton href={catchtableUrl} sameTab>CATCHTABLE</LinkButton>}
           <details className="place-links-menu">
             <summary>其他連結</summary>
             <div>
