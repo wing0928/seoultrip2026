@@ -9,7 +9,7 @@ import {
   googleMapsMapId,
   loadGoogleMaps
 } from '../utils/googleMapsLoader.js';
-import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
+import { catchtableUrlForPlace, googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
 import { distanceInMeters, formatDistance } from '../utils/geo.js';
 import { formatPlaceName, formatPlaceType, normalizePlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
@@ -390,6 +390,7 @@ export default function MapPage({ wishlist = [] }) {
             {orderedVisiblePlaces.map((place) => {
               const active = place.id === selectedPlace?.id;
               const expanded = place.id === expandedId;
+              const catchtableUrl = catchtableUrlForPlace(place);
               return (
                 <article
                   key={place.id}
@@ -439,7 +440,7 @@ export default function MapPage({ wishlist = [] }) {
                       <div className="map-place-links">
                         <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
                         <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
-                        {place.catchtableUrl && <a href={place.catchtableUrl} target="_blank" rel="noreferrer">CATCHTABLE</a>}
+                        {catchtableUrl && <a href={catchtableUrl} target="_blank" rel="noreferrer">CATCHTABLE</a>}
                         {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
                       </div>
                     </div>

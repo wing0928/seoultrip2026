@@ -44,6 +44,20 @@
 
 ## 2026-08-02
 
+### CATCHTABLE restaurant and cafe buttons
+
+- Restaurant and cafe wishlist cards now show a CATCHTABLE button. Saved `catchtableUrl` values remain direct links; otherwise the app opens a CATCHTABLE site search.
+- Search URLs are generated at render time and are not persisted as fake listings. Other place types stay blank, and an unmatched CATCHTABLE search remains an empty result.
+- Validation: `npm.cmd test` (30 passed) and `npm.cmd run build` (success).
+
+- 頁首新增「重新整理」按鈕，使用瀏覽器重新載入目前頁面，不會清除行程、願望清單或其他 localStorage 資料。
+
+### 驗證（重新整理按鈕）
+
+- Build 後確認按鈕含 `aria-label="重新整理"`，並保留目前 URL 與既有資料儲存機制。
+
+## 2026-08-02（願望景點備註遷移）
+
 - 既有願望景點的 `note` 會在載入、備份還原與同步時遷移為 `description`，並清空願望景點備註；原有行程資料的 `note` 不會被遷移或覆寫。
 - 從願望清單帶入行程時，只帶入景點簡介，不再把願望景點舊備註自動帶成行程備註，讓使用者可以在行程編輯器重新輸入當天備註。
 - 願望清單仍保留「景點備註（選填）」欄位，提供未來需要額外記錄時使用；已有景點簡介與備註分開的資料不會互相覆蓋。

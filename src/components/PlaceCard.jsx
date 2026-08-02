@@ -3,7 +3,7 @@ import LinkButton from './LinkButton.jsx';
 import NaverMapButton from './NaverMapButton.jsx';
 import { GoogleRatingStrip, PlacePhotoStrip } from './GooglePlaceDetails.jsx';
 import { districtForArea } from '../data/districts.js';
-import { googleMapUrl } from '../utils/maps.js';
+import { catchtableUrlForPlace, googleMapUrl } from '../utils/maps.js';
 import { supportsGoogleDetails } from '../utils/googlePlaces.js';
 import { formatPlaceName, formatPlaceType, normalizePlaceType } from '../utils/placePresentation.js';
 
@@ -30,6 +30,7 @@ export default function PlaceCard({
     .map((value) => String(value || '').trim())
     .filter(Boolean)
     .join('\n');
+  const catchtableUrl = catchtableUrlForPlace(place);
 
   return (
     <article className={`place-card ${compact ? 'compact' : ''} ${visited ? 'visited' : ''}`}>
@@ -81,12 +82,12 @@ export default function PlaceCard({
           ) : (
             <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
           )}
+          {catchtableUrl && <LinkButton href={catchtableUrl}>CATCHTABLE</LinkButton>}
           <details className="place-links-menu">
             <summary>其他連結</summary>
             <div>
               {hasRoute && <NaverMapButton place={place} />}
               <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
-              {place.catchtableUrl && <LinkButton href={place.catchtableUrl}>CATCHTABLE</LinkButton>}
               {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
             </div>
           </details>

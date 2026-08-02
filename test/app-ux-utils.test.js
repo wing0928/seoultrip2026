@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
-import { naverMapRouteAppUrl, naverMapRouteUrl, routeMapUrl } from '../src/utils/maps.js';
+import { catchtableUrlForPlace, naverMapRouteAppUrl, naverMapRouteUrl, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { migrateWishlist } from '../src/utils/storage.js';
 import { deriveTripDuration, findNextStop, getSeoulNow, selectTripDay } from '../src/utils/tripTime.js';
@@ -99,6 +99,16 @@ test('Naver route links use the current location as origin and a clean Korean de
   assert.equal(appUrl.searchParams.get('slat'), null);
   assert.ok(naverMapRouteUrl(place, location).startsWith('https://map.naver.com/p/directions/-/'));
   assert.doesNotMatch(naverMapRouteUrl(place, location), /大眾交通/);
+});
+
+test('CATCHTABLE links use saved direct URLs or food and cafe search pages', () => {
+  const searchUrl = new URL(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', area: '삼각지' }));
+  assert.equal(searchUrl.origin, 'https://app.catchtable.co.kr');
+  assert.equal(searchUrl.pathname, '/ct/map/COMMON');
+  assert.match(searchUrl.searchParams.get('keyword'), /몽탄/);
+  assert.match(catchtableUrlForPlace({ type: '咖啡廳', nameKo: '카페 오월' }), /keyword=%EC%B9%B4%ED%8E%98/);
+  assert.equal(catchtableUrlForPlace({ type: '景點', nameZh: '景福宮' }), '');
+  assert.equal(catchtableUrlForPlace({ type: '餐廳', nameKo: '몽탄', catchtableUrl: 'https://app.catchtable.co.kr/ct/shop/example' }), 'https://app.catchtable.co.kr/ct/shop/example');
 });
 
 test('distance formatting keeps short distances readable', () => {

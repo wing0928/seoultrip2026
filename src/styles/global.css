@@ -63,6 +63,15 @@ a {
   padding: 10px 4px 8px;
 }
 
+.refresh-button {
+  flex: 0 0 auto;
+  color: var(--blue-dark);
+}
+
+.refresh-button:active {
+  transform: rotate(-25deg);
+}
+
 .app-header h1 {
   margin: 2px 0;
   overflow: hidden;

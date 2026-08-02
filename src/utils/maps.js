@@ -1,6 +1,9 @@
+import { normalizePlaceType } from './placePresentation.js';
+
 const NAVER_MAP_SEARCH = 'https://map.naver.com/p/search/';
 const NAVER_MAP_DIRECTIONS = 'https://map.naver.com/p/directions/-/';
 const GOOGLE_MAP_SEARCH = 'https://www.google.com/maps/search/?api=1&query=';
+const CATCHTABLE_MAP_SEARCH = 'https://app.catchtable.co.kr/ct/map/COMMON';
 const NAVER_MAP_SCHEME = 'nmap://search';
 const NAVER_MAP_ROUTE_SCHEME = 'nmap://route/public';
 const NAVER_MAP_NAVIGATION_SCHEME = 'nmap://navigation';
@@ -14,6 +17,8 @@ const NAVER_LINK_SEARCH_ALIASES = {
   '5eGT08VK': '몽탄',
   '5AmfnBTN': '풍천장어 연남점'
 };
+
+const CATCHTABLE_PLACE_TYPES = new Set(['餐廳', '咖啡廳']);
 
 function withoutEnglishSeoul(query = '') {
   return String(query)
@@ -168,6 +173,31 @@ export function placeSearchQuery(place) {
   const name = placeNameQuery(place);
   const area = place?.area && !['待確認', '其他'].includes(place.area) ? ` ${place.area}` : '';
   return withoutEnglishSeoul(`${name}${area}`);
+}
+
+/**
+ * Use a saved CATCHTABLE listing when available. Otherwise generate a
+ * CATCHTABLE search page for restaurants and cafes without persisting it as
+ * a direct listing URL.
+ */
+export function catchtableUrlForPlace(place) {
+  const directUrl = String(place?.catchtableUrl || '').trim();
+  if (directUrl) return directUrl;
+
+  const type = normalizePlaceType(place?.type);
+  if (!CATCHTABLE_PLACE_TYPES.has(type)) return '';
+
+  const query = placeSearchQuery(place);
+  if (!query) return '';
+
+  const params = new URLSearchParams({
+    bottomSheetHeightType: 'HALF',
+    keyword: query,
+    keywordSearch: query,
+    serviceType: 'INTEGRATION',
+    showTabs: 'true'
+  });
+  return `${CATCHTABLE_MAP_SEARCH}?${params.toString()}`;
 }
 
 function naverSearchName(place) {

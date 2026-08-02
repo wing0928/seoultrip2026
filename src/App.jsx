@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { CalendarDays, Heart, Home, ListChecks, MapPinned, MoreHorizontal, Settings, X } from 'lucide-react';
+import { CalendarDays, Heart, Home, ListChecks, MapPinned, MoreHorizontal, RefreshCw, Settings, X } from 'lucide-react';
 import Dashboard from './pages/Dashboard.jsx';
 import { enrichItinerary } from './data/itinerary.js';
 import useBusinessIdentityRefresh from './hooks/useBusinessIdentityRefresh.js';
@@ -89,6 +89,15 @@ export default function App() {
           <h1>{trip.tripName}</h1>
           <span>{trip.dates} · {trip.nights}</span>
         </div>
+        <button
+          type="button"
+          className="icon-button refresh-button"
+          onClick={() => window.location.reload()}
+          aria-label="重新整理"
+          title="重新整理頁面"
+        >
+          <RefreshCw size={19} />
+        </button>
       </header>
 
       <nav className="top-tabs" aria-label="主要分頁">
