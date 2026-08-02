@@ -4,6 +4,7 @@ import {
   enrichPlaceIdentity,
   needsBusinessIdentityRefresh
 } from '../utils/googlePlaces.js';
+import { mergeIdentityRefreshResult } from '../utils/businessIdentity.js';
 
 export default function useBusinessIdentityRefresh(wishlist, setWishlist, { enabled = true } = {}) {
   const inFlightIdsRef = useRef(new Set());
@@ -44,7 +45,9 @@ export default function useBusinessIdentityRefresh(wishlist, setWishlist, { enab
         };
       }
       inFlightIdsRef.current.delete(item.id);
-      setWishlist((items) => items.map((entry) => entry.id === item.id ? updated : entry));
+      setWishlist((items) => items.map((entry) => (
+        entry.id === item.id ? mergeIdentityRefreshResult(item, updated, entry) : entry
+      )));
       setStatus((current) => {
         const completed = current.completed + 1;
         return {

@@ -5,6 +5,7 @@ import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup
 import { catchtableUrlForPlace, naverMapRouteAppUrl, naverMapRouteUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { migrateWishlist } from '../src/utils/storage.js';
+import { mergeIdentityRefreshResult } from '../src/utils/businessIdentity.js';
 import { deriveTripDuration, findNextStop, getSeoulNow, selectTripDay } from '../src/utils/tripTime.js';
 
 test('Seoul clock uses Asia/Seoul instead of the device timezone', () => {
@@ -118,6 +119,16 @@ test('verified CATCHTABLE listings resolve to an app-safe shop route', async () 
   );
   assert.equal(await resolveCatchtableUrlForPlace({ type: '餐廳', nameKo: '不存在的店' }), '');
   assert.equal(await resolveCatchtableUrlForPlace({ type: '景點', nameKo: '몽탄' }), '');
+});
+
+test('a newer manual type wins over a stale business refresh result', () => {
+  const initial = { id: 'play-x', type: '餐廳' };
+  const updated = { ...initial, type: '其他', typeManuallySet: false, businessLookupVersion: 7 };
+  const current = { ...initial, type: '選物店', typeManuallySet: true };
+  const merged = mergeIdentityRefreshResult(initial, updated, current);
+  assert.equal(merged.type, '選物店');
+  assert.equal(merged.typeManuallySet, true);
+  assert.equal(merged.businessLookupVersion, 7);
 });
 
 test('distance formatting keeps short distances readable', () => {
