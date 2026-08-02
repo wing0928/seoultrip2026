@@ -86,7 +86,7 @@ export default function Dashboard({ trip, itinerary, onOpenItinerary }) {
             {nextStop.nameKo && <p className="korean-name" lang="ko">{nextStop.nameKo}</p>}
             {nextStop.note && <p className="soft-text">{nextStop.note}</p>}
             <div className="today-primary-actions">
-              <NaverMapButton place={nextStop} variant="primary">
+              <NaverMapButton place={nextStop} route variant="primary">
                 <Navigation size={18} />
                 開始導航
               </NaverMapButton>

@@ -61,7 +61,7 @@ export default function PlaceCard({
         {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} />}
         <div className="button-row place-link-row">
           {hasRoute ? (
-            <LinkButton href={place.routeUrl} variant="primary"><Navigation size={17} /> 開始導航</LinkButton>
+            <NaverMapButton place={place} route variant="primary"><Navigation size={17} /> 開始導航</NaverMapButton>
           ) : (
             <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
           )}

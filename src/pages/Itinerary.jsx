@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigation, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { GoogleReviewDialog } from '../components/GooglePlaceDetails.jsx';
 import LinkButton from '../components/LinkButton.jsx';
+import NaverMapButton from '../components/NaverMapButton.jsx';
 import PlaceCard from '../components/PlaceCard.jsx';
 import UndoToast from '../components/UndoToast.jsx';
 import { enrichItinerary, periods } from '../data/itinerary.js';
@@ -9,7 +10,6 @@ import { districts } from '../data/districts.js';
 import { CLOTHING_SUBTAGS, ITINERARY_PLACE_TYPES } from '../data/placeTypes.js';
 import useGooglePlaceDetails from '../hooks/useGooglePlaceDetails.js';
 import { hasCurrentGooglePhotoUrls, supportsGoogleDetails } from '../utils/googlePlaces.js';
-import { routeMapUrl } from '../utils/maps.js';
 import { formatPlaceType, normalizePlaceType } from '../utils/placePresentation.js';
 
 const emptyStop = {
@@ -519,8 +519,6 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   function transportBlock(dayId, previous, next) {
     const transport = next.transportFromPrevious;
     const isEditingTransport = transportEditing?.dayId === dayId && transportEditing?.stopId === next.id;
-    const origin = `${previous.nameKo || previous.name} ${previous.area || ''}`.trim();
-    const destination = `${next.nameKo || next.name} ${next.area || ''}`.trim();
     if (!transport && !isEditingTransport) {
       return <button className="mini-button transport-add" onClick={() => startTransportEdit(dayId, next)}><Plus size={15} /> 新增交通方式</button>;
     }
@@ -534,7 +532,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
               <span>{transport.mode}{transport.duration ? ` · ${transport.duration}` : ''}</span>
               {transport.note && <span>{transport.note}</span>}
             </div>
-            <div className="button-row"><LinkButton href={routeMapUrl(origin, destination)}><Navigation size={16} /> 查路線</LinkButton></div>
+            <div className="button-row"><NaverMapButton place={next} route><Navigation size={16} /> 查路線</NaverMapButton></div>
             <div className="action-row">
               <button onClick={() => startTransportEdit(dayId, next)}>{isEditingTransport ? <X size={17} /> : <Pencil size={17} />}{isEditingTransport ? '關閉' : '編輯'}</button>
               <button className="danger" onClick={() => deleteTransport(dayId, next.id)}><Trash2 size={17} /> 刪除</button>

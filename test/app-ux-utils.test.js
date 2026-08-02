@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
-import { routeMapUrl } from '../src/utils/maps.js';
+import { naverMapRouteAppUrl, naverMapRouteUrl, routeMapUrl } from '../src/utils/maps.js';
+import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { deriveTripDuration, findNextStop, getSeoulNow, selectTripDay } from '../src/utils/tripTime.js';
 
 test('Seoul clock uses Asia/Seoul instead of the device timezone', () => {
@@ -64,4 +65,24 @@ test('Naver route cleanup removes the duplicate comma left by English Seoul', ()
     '景福宮'
   ));
   assert.equal(url.includes(', ,'), false);
+});
+
+test('Naver route links use the current location as origin and a clean Korean destination', () => {
+  const place = { nameKo: '명동성당', nameZh: '明洞聖堂' };
+  const location = { latitude: 37.5636, longitude: 126.9869 };
+  const appUrl = new URL(naverMapRouteAppUrl(place, location));
+  assert.equal(appUrl.protocol, 'nmap:');
+  assert.equal(`${appUrl.hostname}${appUrl.pathname}`, 'route/public');
+  assert.equal(appUrl.searchParams.get('dlat'), '37.5636');
+  assert.equal(appUrl.searchParams.get('dlng'), '126.9869');
+  assert.equal(appUrl.searchParams.get('dname'), '명동성당');
+  assert.equal(appUrl.searchParams.get('slat'), null);
+  assert.ok(naverMapRouteUrl(place, location).startsWith('https://map.naver.com/p/directions/-/'));
+  assert.doesNotMatch(naverMapRouteUrl(place, location), /大眾交通/);
+});
+
+test('distance formatting keeps short distances readable', () => {
+  assert.equal(Math.round(distanceInMeters({ latitude: 37.5636, longitude: 126.9869 }, { latitude: 37.5636, longitude: 126.997 })), 890);
+  assert.equal(formatDistance(850), '850 公尺');
+  assert.equal(formatDistance(1320), '1.3 公里');
 });

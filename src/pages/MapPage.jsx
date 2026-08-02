@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, ExternalLink, MapPin } from 'lucide-react';
+import { ChevronDown, ExternalLink, LocateFixed, MapPin } from 'lucide-react';
 import DistrictExplorer from '../components/DistrictExplorer.jsx';
 import { districtForArea, districts } from '../data/districts.js';
 import { PLACE_TYPES } from '../data/placeTypes.js';
-import { getGoogleMapLocations } from '../utils/googlePlaces.js';
+import { getGoogleMapLocations, googlePlacesConfigured } from '../utils/googlePlaces.js';
 import {
   googleMapsBrowserApiKey,
   googleMapsMapId,
   loadGoogleMaps
 } from '../utils/googleMapsLoader.js';
 import { googleMapEmbedUrl, googleMapUrl, placeMapUrl } from '../utils/maps.js';
+import { distanceInMeters, formatDistance } from '../utils/geo.js';
 import { formatPlaceName, formatPlaceType, normalizePlaceType, placeTypeEmoji } from '../utils/placePresentation.js';
 
 const TYPE_ORDER = PLACE_TYPES;
@@ -21,6 +22,10 @@ export default function MapPage({ wishlist = [] }) {
   const [selectedId, setSelectedId] = useState('');
   const [expandedId, setExpandedId] = useState('');
   const [mapStatus, setMapStatus] = useState({ state: 'idle', markerCount: 0, message: '' });
+  const [currentPosition, setCurrentPosition] = useState(null);
+  const [locationState, setLocationState] = useState('idle');
+  const [locationMessage, setLocationMessage] = useState('按一下即可顯示目前位置到各景點的直線距離');
+  const [placeLocations, setPlaceLocations] = useState({});
   const mapNodeRef = useRef(null);
   const placeListRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -88,6 +93,7 @@ export default function MapPage({ wishlist = [] }) {
       clearMarkers(markersRef);
       markerElementsRef.current = new Map();
       locationByIdRef.current = new Map();
+      setPlaceLocations({});
 
       if (!visiblePlaces.length) {
         setMapStatus({ state: 'empty', markerCount: 0, message: '' });
@@ -154,6 +160,7 @@ export default function MapPage({ wishlist = [] }) {
         markersRef.current = markers;
         markerElementsRef.current = nextMarkerElements;
         locationByIdRef.current = nextLocations;
+        setPlaceLocations(Object.fromEntries(nextLocations));
         if (markers.length === 1) {
           map.setCenter({ lat: locations[0].latitude, lng: locations[0].longitude });
           map.setZoom(16);
@@ -186,6 +193,53 @@ export default function MapPage({ wishlist = [] }) {
   }, [selectedDistrict, visiblePlaces]);
 
   useEffect(() => {
+    let cancelled = false;
+    if (!currentPosition || !visiblePlaces.length) return undefined;
+
+    const missingPlaces = visiblePlaces.filter((place) => !Object.prototype.hasOwnProperty.call(placeLocations, place.id));
+    if (!missingPlaces.length) {
+      setLocationState('ready');
+      setLocationMessage(visiblePlaces.some((place) => !placeLocations[place.id])
+        ? '目前位置已取得，但部分景點尚未找到可用座標'
+        : '目前位置已取得，距離會顯示在景點名稱後方');
+      return undefined;
+    }
+    if (!googlePlacesConfigured) {
+      setLocationState('ready');
+      setLocationMessage('目前位置已取得，但尚未設定景點座標服務，暫時無法計算距離');
+      return undefined;
+    }
+
+    setLocationState('loading-places');
+    setLocationMessage('正在取得景點座標，稍候顯示距離…');
+    getGoogleMapLocations(missingPlaces)
+      .then((locations) => {
+        if (cancelled) return;
+        const resolvedById = new Map(locations.map((location) => [location.id, {
+          latitude: location.latitude,
+          longitude: location.longitude
+        }]));
+        setPlaceLocations((current) => ({
+          ...current,
+          ...Object.fromEntries(missingPlaces.map((place) => [place.id, resolvedById.get(place.id) || null]))
+        }));
+        setLocationState('ready');
+        setLocationMessage(locations.length
+          ? '目前位置已取得，距離會顯示在景點名稱後方'
+          : '目前位置已取得，但部分景點尚未找到可用座標');
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLocationState('error');
+        setLocationMessage('景點座標暫時無法取得，請稍後再試');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPosition, placeLocations, visiblePlaces]);
+
+  useEffect(() => {
     markerElementsRef.current.forEach((element, id) => {
       element.classList.toggle('selected-map-marker', id === selectedId);
     });
@@ -211,6 +265,30 @@ export default function MapPage({ wishlist = [] }) {
       mapInstanceRef.current.setZoom(PLACE_FOCUS_ZOOM);
     }
     if (placeListRef.current) placeListRef.current.scrollTop = 0;
+  }
+
+  function requestCurrentLocation() {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      setLocationState('error');
+      setLocationMessage('此裝置不支援瀏覽器定位');
+      return;
+    }
+
+    setLocationState('loading');
+    setLocationMessage('正在取得目前位置…');
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setCurrentPosition({ latitude: coords.latitude, longitude: coords.longitude });
+        setLocationState('ready');
+        setLocationMessage('目前位置已取得，正在計算景點距離…');
+      },
+      (error) => {
+        setCurrentPosition(null);
+        setLocationState('error');
+        setLocationMessage(geolocationErrorMessage(error));
+      },
+      { enableHighAccuracy: false, maximumAge: 300000, timeout: 10000 }
+    );
   }
 
   return (
@@ -241,6 +319,13 @@ export default function MapPage({ wishlist = [] }) {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="map-location-tools">
+            <button type="button" className="mini-button" onClick={requestCurrentLocation} disabled={locationState === 'loading' || locationState === 'loading-places'}>
+              <LocateFixed size={16} />
+              {locationState === 'loading' || locationState === 'loading-places' ? '正在取得距離…' : currentPosition ? '更新目前位置' : '顯示目前位置距離'}
+            </button>
+            <p className={`map-location-status ${locationState === 'error' ? 'error' : ''}`} role="status" aria-live="polite">{locationMessage}</p>
           </div>
         </div>
       </section>
@@ -320,6 +405,13 @@ export default function MapPage({ wishlist = [] }) {
                     <MapPin size={18} />
                     <span>
                       <strong>{formatPlaceName(place)}</strong>
+                      {currentPosition && (
+                        <small className={`map-place-distance ${placeLocations[place.id] ? '' : 'pending'}`}>
+                          {placeLocations[place.id]
+                            ? `距離 ${formatDistance(distanceInMeters(currentPosition, placeLocations[place.id]))}（直線）`
+                            : '距離暫無'}
+                        </small>
+                      )}
                       <small>{formatPlaceType(place.type)}</small>
                     </span>
                   </button>
@@ -368,4 +460,11 @@ function clearMarkers(markersRef) {
     marker.map = null;
   });
   markersRef.current = [];
+}
+
+function geolocationErrorMessage(error) {
+  if (error?.code === 1) return '定位權限未開啟；允許後再按一次即可顯示距離';
+  if (error?.code === 2) return '目前無法判定位置，請確認裝置定位已開啟';
+  if (error?.code === 3) return '定位逾時，請稍後再試';
+  return '目前位置暫時無法取得，請稍後再試';
 }

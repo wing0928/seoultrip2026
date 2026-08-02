@@ -1225,6 +1225,31 @@ textarea {
   font-size: 0.82rem;
 }
 
+.map-location-tools {
+  display: grid;
+  gap: 5px;
+}
+
+.map-location-tools .mini-button {
+  justify-self: start;
+}
+
+.map-location-tools .mini-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.map-location-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
+.map-location-status.error {
+  color: #a04c42;
+}
+
 .map-workspace {
   min-width: 0;
   display: grid;
@@ -1457,6 +1482,17 @@ textarea {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.35;
+}
+
+.map-place-select .map-place-distance {
+  margin-top: 3px;
+  color: var(--blue-dark);
+  font-weight: 800;
+}
+
+.map-place-select .map-place-distance.pending {
+  color: var(--muted);
+  font-weight: 650;
 }
 
 .map-place-item.active {

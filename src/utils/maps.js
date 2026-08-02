@@ -1,7 +1,12 @@
 const NAVER_MAP_SEARCH = 'https://map.naver.com/p/search/';
+const NAVER_MAP_DIRECTIONS = 'https://map.naver.com/p/directions/-/';
 const GOOGLE_MAP_SEARCH = 'https://www.google.com/maps/search/?api=1&query=';
 const NAVER_MAP_SCHEME = 'nmap://search';
+const NAVER_MAP_ROUTE_SCHEME = 'nmap://route/public';
+const NAVER_MAP_NAVIGATION_SCHEME = 'nmap://navigation';
 const NAVER_MAP_ANDROID_INTENT = 'intent://search';
+const NAVER_MAP_ROUTE_ANDROID_INTENT = 'intent://route/public';
+const NAVER_MAP_NAVIGATION_ANDROID_INTENT = 'intent://navigation';
 const NAVER_MAP_ANDROID_PACKAGE = 'com.nhn.android.nmap';
 const NAVER_WEB_APP_NAME = 'https://wing0928.github.io/seoultrip2026/';
 const NAVER_LINK_SEARCH_ALIASES = {
@@ -25,7 +30,11 @@ export function searchMapUrl(query) {
 
 export function routeMapUrl(origin, destination) {
   if (!origin || !destination) return searchMapUrl(destination || origin || '首爾');
-  return searchMapUrl(`${origin} 到 ${destination} 大眾交通`);
+  // Keep generated itinerary data useful without turning a route into a
+  // literal search query (for example, "A 到 B 大眾交通"). The interactive
+  // route buttons resolve the destination coordinates and use the Naver route
+  // URL scheme below.
+  return searchMapUrl(destination);
 }
 
 export function placeMapUrl(place) {
@@ -48,12 +57,78 @@ export function naverMapAndroidIntentUrl(place) {
   return `${NAVER_MAP_ANDROID_INTENT}?query=${query}&appname=${appName}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=${NAVER_MAP_ANDROID_PACKAGE};end`;
 }
 
+export function naverMapRouteUrl(place, location) {
+  const coordinates = normalizeCoordinates(location || place);
+  if (!coordinates) return placeMapUrl(place);
+
+  const destination = encodeURIComponent(naverSearchName(place) || placeNameQuery(place) || '首爾');
+  const { x, y } = toNaverWebCoordinates(coordinates);
+  return `${NAVER_MAP_DIRECTIONS}${x},${y},${destination},,PLACE_POI/-/transit`;
+}
+
+export function naverMapRouteAppUrl(place, location) {
+  const coordinates = normalizeCoordinates(location || place);
+  if (!coordinates) return naverMapAppUrl(place);
+
+  const params = new URLSearchParams({
+    dlat: String(coordinates.latitude),
+    dlng: String(coordinates.longitude),
+    dname: naverSearchName(place) || placeNameQuery(place) || '首爾',
+    appname: NAVER_WEB_APP_NAME
+  });
+  return `${NAVER_MAP_ROUTE_SCHEME}?${params.toString()}`;
+}
+
+export function naverMapNavigationAppUrl(place, location) {
+  const coordinates = normalizeCoordinates(location || place);
+  if (!coordinates) return naverMapAppUrl(place);
+
+  const params = new URLSearchParams({
+    dlat: String(coordinates.latitude),
+    dlng: String(coordinates.longitude),
+    dname: naverSearchName(place) || placeNameQuery(place) || '首爾',
+    appname: NAVER_WEB_APP_NAME
+  });
+  return `${NAVER_MAP_NAVIGATION_SCHEME}?${params.toString()}`;
+}
+
+export function naverMapRouteAndroidIntentUrl(place, location) {
+  return toNaverAndroidIntentUrl(naverMapRouteAppUrl(place, location), NAVER_MAP_ROUTE_ANDROID_INTENT);
+}
+
+export function naverMapNavigationAndroidIntentUrl(place, location) {
+  return toNaverAndroidIntentUrl(naverMapNavigationAppUrl(place, location), NAVER_MAP_NAVIGATION_ANDROID_INTENT);
+}
+
 function naverAppSearchQuery(place) {
   const naverUrl = String(place?.naverMapUrl || place?.mapUrl || '');
   const aliasKey = Object.keys(NAVER_LINK_SEARCH_ALIASES).find((key) => naverUrl.includes(key));
   if (aliasKey) return NAVER_LINK_SEARCH_ALIASES[aliasKey];
 
   return naverSearchName(place) || '서울';
+}
+
+function toNaverAndroidIntentUrl(appUrl, intentPath) {
+  const parsed = new URL(appUrl);
+  const appName = parsed.searchParams.get('appname') || NAVER_WEB_APP_NAME;
+  const query = new URLSearchParams(parsed.searchParams);
+  query.set('appname', appName);
+  return `${intentPath}?${query.toString()}#Intent;scheme=nmap;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;package=${NAVER_MAP_ANDROID_PACKAGE};end`;
+}
+
+function normalizeCoordinates(value) {
+  const latitude = Number(value?.latitude ?? value?.lat);
+  const longitude = Number(value?.longitude ?? value?.lng);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
+
+function toNaverWebCoordinates({ latitude, longitude }) {
+  const earthRadius = 20037508.34;
+  const x = longitude * earthRadius / 180;
+  const y = Math.log(Math.tan((90 + latitude) * Math.PI / 360)) / (Math.PI / 180) * earthRadius / 180;
+  return { x: x.toFixed(7), y: y.toFixed(7) };
 }
 
 export function googleMapUrl(place) {
