@@ -148,6 +148,16 @@ test('wishlist migration keeps a manually selected type', () => {
   assert.equal(place.typeManuallySet, true);
 });
 
+test('existing non-bulk wishlist types are protected for future refreshes', () => {
+  const [place] = migrateWishlist([{
+    id: 'legacy-manual-type',
+    nameZh: '既有手動景點',
+    type: '景點'
+  }]);
+  assert.equal(place.type, '景點');
+  assert.equal(place.typeManuallySet, true);
+});
+
 test('manual type prevents the Dongdaemun area migration from changing it', () => {
   const [place] = migrateWishlistAreas([{
     id: 'manual-dongdaemun-type',

@@ -48,7 +48,8 @@
 
 - 願望清單編輯器儲存時會記錄 `typeManuallySet`，之後 Google 商家背景更新只更新名稱、地圖與評論資料，不會覆蓋手動選擇的景點類型。
 - 願望清單載入、家庭同步與東大門舊資料遷移也會保留手動類型。
-- Validation: `npm.cmd test` (33 passed) and `npm.cmd run build` (success).
+- 既有非大量匯入且已有類型的願望景點會在首次載入時自動補上保護標記，無需逐筆重設。
+- Validation: `npm.cmd test` (34 passed) and `npm.cmd run build` (success).
 
 ### CATCHTABLE restaurant and cafe buttons
 

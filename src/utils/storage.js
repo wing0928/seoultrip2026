@@ -71,16 +71,12 @@ export function loadWishlist() {
 }
 
 export function migrateWishlist(items = []) {
-  return migrateWishlistAreas(items).map((item) => {
+  const preparedItems = items.map(markExistingManualType);
+  return migrateWishlistAreas(preparedItems).map((item) => {
     const placeNames = `${item.nameZh || item.chineseName || item.name || ''} ${item.nameKo || item.koreanName || ''}`;
     if (/東大門綜合市場|동대문종합시장/i.test(placeNames)) return migrateLegacyWishlistDescription(item);
 
-    const isBulkPlace = item.bulkImported || (
-      item.note &&
-      item.recommendationSource &&
-      item.sourceUrl &&
-      (item.naverMapUrl || item.googleMapUrl)
-    );
+    const isBulkPlace = isBulkWishlistPlace(item);
     if (!isBulkPlace) return migrateLegacyWishlistDescription(item);
 
     const wasLegacyShop = item.type === '商店';
@@ -93,6 +89,20 @@ export function migrateWishlist(items = []) {
       needsBusinessLookup: wasLegacyShop || item.needsBusinessLookup
     });
   });
+}
+
+function markExistingManualType(item) {
+  if (item?.typeManuallySet || !item?.type || isBulkWishlistPlace(item)) return item;
+  return { ...item, typeManuallySet: true };
+}
+
+function isBulkWishlistPlace(item) {
+  return Boolean(item?.bulkImported || (
+    item?.note &&
+    item?.recommendationSource &&
+    item?.sourceUrl &&
+    (item?.naverMapUrl || item?.googleMapUrl)
+  ));
 }
 
 function migrateLegacyWishlistDescription(item) {
