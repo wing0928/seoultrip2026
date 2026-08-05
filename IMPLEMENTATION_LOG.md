@@ -15,6 +15,7 @@
 - Google Maps 連結會使用獨立快取鍵，不會讀取舊韓文名稱的星等／照片快取；修改連結時也會清除舊 Place ID，避免新連結被舊資料蓋回。
 - 背景商家更新會保留使用者輸入的 Google Maps 連結；地圖定位與嵌入地圖也優先使用連結中的 Place ID。
 - 若連結是 `maps.app.goo.gl` 短網址，Edge Function 會先展開網址再解析；只要存在使用者連結，就不會再沿用同一筆資料裡的舊 Place ID。
+- Google 星等、評價數與「重新搜尋照片與星等」按鈕改為固定單列；評價文字會在窄螢幕省略，不再把按鈕推到下一行。
 - Supabase `google-place-details` Edge Function 已部署，實測含 Place ID 的連結回傳 `google_link`，確認未先走韓文名稱搜尋。
 
 ### 驗證
