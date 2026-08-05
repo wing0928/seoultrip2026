@@ -27,9 +27,9 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
   }
 
   const linkedPlaceId = googlePlaceIdFromMapUrl(place.googleMapUrl);
-  const placeId = linkedPlaceId || place.googlePlaceId || '';
   const query = placeNameQuery(place);
   const directUrl = String(place.googleMapUrl || '').trim();
+  const placeId = linkedPlaceId || (directUrl ? '' : (place.googlePlaceId || ''));
   const cacheId = placeId ? `place:${placeId}` : (directUrl ? `url:${directUrl}` : query);
   const cached = readCache()[cacheId];
   if (!refresh && cached && Date.now() - cached.savedAt < CACHE_TTL && hasCurrentGooglePhotoUrls(cached.data)) {
@@ -68,7 +68,7 @@ export async function getGoogleMapLocations(places, { refresh = false } = {}) {
     } else {
       missing.push({
         id: place.id,
-        placeId: googlePlaceIdFromMapUrl(place.googleMapUrl) || place.googlePlaceId || '',
+        placeId: googlePlaceIdFromMapUrl(place.googleMapUrl) || (place.googleMapUrl ? '' : (place.googlePlaceId || '')),
         query: placeNameQuery(place),
         area: place.area || '',
         cacheId
@@ -228,7 +228,8 @@ function writeStorageCache(key, cache) {
 }
 
 function mapLocationCacheId(place) {
-  return `${googlePlaceIdFromMapUrl(place?.googleMapUrl) || place?.googlePlaceId || placeNameQuery(place)}|${place?.area || ''}`;
+  const directUrl = String(place?.googleMapUrl || '').trim();
+  return `${googlePlaceIdFromMapUrl(directUrl) || (directUrl ? `url:${directUrl}` : (place?.googlePlaceId || placeNameQuery(place)))}|${place?.area || ''}`;
 }
 
 export function hasCurrentGooglePhotoUrls(data) {

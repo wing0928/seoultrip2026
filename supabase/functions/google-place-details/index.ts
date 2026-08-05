@@ -183,7 +183,7 @@ async function resolveIdentity(
 ) {
   const nameZh = cleanQuery(body?.nameZh);
   const providedNameKo = cleanQuery(body?.nameKo);
-  const googleMapUrl = cleanQuery(body?.googleMapUrl);
+  const googleMapUrl = await expandGoogleMapUrl(body?.googleMapUrl);
   const linkedPlaceId = extractGooglePlaceId(googleMapUrl);
   const originalName = nameZh || providedNameKo || linkedPlaceId;
   if (!originalName) return json({ code: 'invalid_name', error: '缺少可查詢的店名或 Google Maps 連結' }, 400, cors);
@@ -528,6 +528,21 @@ function extractGoogleMapQuery(value: unknown) {
   }
 
   return '';
+}
+
+async function expandGoogleMapUrl(value: unknown) {
+  const raw = cleanQuery(value);
+  if (!raw || !/(?:maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(raw)) return raw;
+
+  try {
+    const response = await fetch(raw, {
+      redirect: 'follow',
+      headers: { 'User-Agent': 'Mozilla/5.0 GoogleMapsLinkResolver/1.0' }
+    });
+    return cleanQuery(response.url || raw);
+  } catch {
+    return raw;
+  }
 }
 
 class GoogleApiError extends Error {
