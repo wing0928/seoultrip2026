@@ -22,6 +22,7 @@ const emptyForm = {
   catchtableUrl: '',
   recommendationSource: '',
   naverMapUrl: '',
+  googleMapUrl: '',
   description: '',
   note: '',
   clothingTags: [],
@@ -293,7 +294,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
                 type="search"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="搜尋中文、韓文、地區或備註"
+                placeholder="搜尋中文、韓文、地區或景點簡介"
               />
             </label>
             <button
@@ -367,6 +368,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               googleDetails={details}
               googleStatus={status}
               showGoogleDetails
+              showNote={false}
               onOpenGoogle={() => openGoogleDialog(item)}
               onAreaSelect={(district) => setAreaFilter(district.name)}
               actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => deleteWishlistItem(item)}><Trash2 size={17} /> 刪除</button></>}
@@ -430,8 +432,8 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               <label>來源連結<input value={form.sourceUrl} onChange={(event) => updateField('sourceUrl', event.target.value)} placeholder="貼上 Reels / Threads / 網頁" /></label>
               <label>CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
               <label className="full">Naver Map 連結<input value={form.naverMapUrl} onChange={(event) => updateField('naverMapUrl', event.target.value)} placeholder="可留空，自動用韓文名稱搜尋" /></label>
+              <label className="full">Google Maps 連結<input value={form.googleMapUrl} onChange={(event) => updateField('googleMapUrl', event.target.value)} placeholder="貼上 Google Maps 連結，可用來搜尋星等與照片" /></label>
               <label className="full">景點簡介<textarea value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="例如：適合逛街、拍照或安排在晚餐前。" /></label>
-              <label className="full">景點備註（選填）<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="想補充的營業時間、必點或排隊提醒..." /></label>
               <button className="wide-button full" type="submit"><Plus size={18} /> {editingId ? '儲存修改' : '加入願望清單'}</button>
             </form>
           </section>
@@ -520,7 +522,6 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
                       <span>{formatPlaceName(item)}</span>
                       <small>#{districtForArea(item.area).name} · {formatPlaceType(item.type)}{item.naverMapUrl ? ' · Naver' : ''}{item.googleMapUrl ? ' · Google' : ''}</small>
                       {['not_found', 'error', 'google_error'].includes(item.businessLookupStatus) && <small className="lookup-error">{item.businessLookupNote || 'Google 找不到商家'}</small>}
-                      {item.note && <small className="lookup-description">{item.note}</small>}
                     </li>
                   ))}
                 </ol>

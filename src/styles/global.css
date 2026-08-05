@@ -1603,6 +1603,17 @@ textarea {
   font-size: 0.7rem;
 }
 
+.map-place-description {
+  margin-top: 10px;
+}
+
+.map-place-description > strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--ink);
+  font-size: 0.7rem;
+}
+
 .map-place-links {
   display: flex;
   flex-wrap: wrap;
@@ -2701,12 +2712,10 @@ textarea {
   line-height: 1;
 }
 
-.place-links-menu,
 .card-actions-menu {
   position: relative;
 }
 
-.place-links-menu > summary,
 .card-actions-menu > summary {
   min-height: 44px;
   display: inline-flex;
@@ -2724,21 +2733,12 @@ textarea {
   list-style: none;
 }
 
-.place-links-menu > summary::-webkit-details-marker,
 .card-actions-menu > summary::-webkit-details-marker {
   display: none;
 }
 
-.place-links-menu[open] > summary,
 .card-actions-menu[open] > summary {
   border-color: var(--blue-dark);
-}
-
-.place-links-menu > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 8px;
 }
 
 .card-actions-menu {

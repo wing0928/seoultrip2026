@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
-import { catchtableUrlForPlace, naverMapRouteAppUrl, naverMapRouteUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
+import { catchtableUrlForPlace, googleMapUrl, naverMapRouteAppUrl, naverMapRouteUrl, placeMapUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { migrateWishlist } from '../src/utils/storage.js';
 import { mergeIdentityRefreshResult } from '../src/utils/businessIdentity.js';
@@ -100,6 +100,14 @@ test('Naver route links use the current location as origin and a clean Korean de
   assert.equal(appUrl.searchParams.get('slat'), null);
   assert.ok(naverMapRouteUrl(place, location).startsWith('https://map.naver.com/p/directions/-/'));
   assert.doesNotMatch(naverMapRouteUrl(place, location), /大眾交通/);
+});
+
+test('saved Naver and Google links remain the exact place links', () => {
+  const naver = { nameKo: '성수 카페', naverMapUrl: 'https://naver.me/example-place' };
+  assert.equal(placeMapUrl(naver), naver.naverMapUrl);
+
+  const google = { nameKo: '성수 카페', googleMapUrl: 'https://www.google.com/maps/place/example' };
+  assert.equal(googleMapUrl(google), google.googleMapUrl);
 });
 
 test('CATCHTABLE links use saved direct URLs or verified food and cafe shop pages', () => {

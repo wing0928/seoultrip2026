@@ -200,10 +200,12 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
       name: item.name || item.nameZh || item.nameKo || '',
       nameKo: item.nameKo || item.koreanName || '',
       nameZh: item.nameZh || item.chineseName || '',
-      description: item.description || item.reason || item.note || current.description,
+      description: item.description || item.reason || current.description,
       type: current.type || normalizePlaceType(item.type) || '景點',
       area: current.area || item.area || '',
-      note: current.note,
+      // Selecting a wishlist place supplies the place details only. The note
+      // belongs to this itinerary stop and is entered separately below.
+      note: editing?.mode === 'add' ? '' : current.note,
       recommendationSource: item.recommendationSource || '',
       sourceUrl: item.sourceUrl || '',
       catchtableUrl: item.catchtableUrl || '',
@@ -486,6 +488,8 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
           <label className="full">景點簡介<textarea value={form.description} onChange={(event) => updateField('description', event.target.value)} placeholder="例如：韓屋街區，適合白天散步與拍照。" /></label>
           <label className="full">備註<textarea value={form.note} onChange={(event) => updateField('note', event.target.value)} placeholder="儲存行程細項、必吃、營業時間或排隊提醒" /></label>
           <label className="full">CATCHTABLE 連結<input value={form.catchtableUrl} onChange={(event) => updateField('catchtableUrl', event.target.value)} placeholder="https://app.catchtable.co.kr/..." /></label>
+          <label className="full">Naver Map 連結<input value={form.naverMapUrl} onChange={(event) => updateField('naverMapUrl', event.target.value)} placeholder="可留空，會優先使用願望景點的 Naver Map 連結" /></label>
+          <label className="full">Google Maps 連結<input value={form.googleMapUrl} onChange={(event) => updateField('googleMapUrl', event.target.value)} placeholder="貼上 Google Maps 連結，可用來搜尋星等與照片" /></label>
           <button className="wide-button" type="submit">{editing?.mode === 'add' ? '新增到行程' : '儲存行程'}</button>
         </form>
       </div>

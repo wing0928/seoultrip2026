@@ -392,6 +392,10 @@ export default function MapPage({ wishlist = [] }) {
               const active = place.id === selectedPlace?.id;
               const expanded = place.id === expandedId;
               const catchtableUrl = catchtableUrlForPlace(place);
+              const description = [place.description, place.reason]
+                .map((value) => String(value || '').trim())
+                .filter(Boolean)
+                .join('\n');
               return (
                 <article
                   key={place.id}
@@ -437,12 +441,17 @@ export default function MapPage({ wishlist = [] }) {
                         <div><dt>地區</dt><dd>#{selectedDistrict.name}</dd></div>
                       </dl>
                       {place.recommendationSource && <p><strong>推薦來源</strong>{place.recommendationSource}</p>}
-                      {place.note && <p><strong>備註</strong>{place.note}</p>}
+                      {description && (
+                        <div className="map-place-description">
+                          <strong>景點簡介</strong>
+                          {description.split('\n').map((line, index) => <p key={`${line}-${index}`}>{line}</p>)}
+                        </div>
+                      )}
                       <div className="map-place-links">
                         <a href={placeMapUrl(place)} target="_blank" rel="noreferrer">Naver Map</a>
-                        <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
-                        {catchtableUrl && <CatchtableButton place={place} className="map-place-link" />}
                         {place.sourceUrl && <a href={place.sourceUrl} target="_blank" rel="noreferrer">來源</a>}
+                        {catchtableUrl && <CatchtableButton place={place} className="map-place-link" />}
+                        <a href={googleMapUrl(place)} target="_blank" rel="noreferrer">Google Maps</a>
                       </div>
                     </div>
                   )}

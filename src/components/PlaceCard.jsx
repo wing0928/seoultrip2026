@@ -18,7 +18,8 @@ export default function PlaceCard({
   showGoogleDetails = false,
   onOpenGoogle = null,
   onAreaSelect = null,
-  collapseSummary = false
+  collapseSummary = false,
+  showNote = true
 }) {
   const displayName = formatPlaceName(place);
   const district = districtForArea(place.area);
@@ -26,7 +27,7 @@ export default function PlaceCard({
   const AreaTag = onAreaSelect ? 'button' : 'span';
   const hasRoute = Boolean(place.routeUrl && !place.transportFromPrevious);
   const placeType = normalizePlaceType(place.type);
-  const note = String(place.note || '').trim();
+  const note = showNote ? String(place.note || '').trim() : '';
   const description = [place.description, place.reason]
     .map((value) => String(value || '').trim())
     .filter(Boolean)
@@ -83,15 +84,9 @@ export default function PlaceCard({
           ) : (
             <NaverMapButton place={place} variant="primary"><Navigation size={17} /> 開啟 Naver Map</NaverMapButton>
           )}
+          {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
           {catchtableUrl && <CatchtableButton place={place} />}
-          <details className="place-links-menu">
-            <summary>其他連結</summary>
-            <div>
-              {hasRoute && <NaverMapButton place={place} />}
-              <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
-              {place.sourceUrl && <LinkButton href={place.sourceUrl}>來源</LinkButton>}
-            </div>
-          </details>
+          <LinkButton href={googleMapUrl(place)}>Google Maps</LinkButton>
         </div>
         {actions && (
           <details className="card-actions-menu">

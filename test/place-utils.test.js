@@ -98,6 +98,12 @@ test('wishlist search matches the known Chinese translation for 꿉당 성수점
   assert.equal(matchesWishlistQuery(place, '聖水店'), true);
 });
 
+test('wishlist search uses the place description instead of itinerary notes', () => {
+  const place = { nameZh: '景福宮', description: '早上適合拍照', note: '只在行程頁提醒' };
+  assert.equal(matchesWishlistQuery(place, '拍照'), true);
+  assert.equal(matchesWishlistQuery(place, '行程頁提醒'), false);
+});
+
 test('legacy shop categories display as the new clothing category', () => {
   assert.equal(normalizePlaceType('男裝'), '服裝');
   assert.equal(normalizePlaceType('女裝'), '服裝');

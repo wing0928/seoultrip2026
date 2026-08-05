@@ -20,7 +20,10 @@ export default function NaverMapButton({ place, children = 'Naver Map', variant 
   const cancelFallbackRef = useRef(() => {});
   const directLocation = placeCoordinates(place);
   const webUrl = route && directLocation ? naverMapRouteUrl(place, directLocation) : placeMapUrl(place);
-  const appUrl = route && directLocation ? naverMapRouteAppUrl(place, directLocation) : naverMapAppUrl(place);
+  const hasSavedNaverUrl = savedNaverUrl(place);
+  const appUrl = route && directLocation
+    ? naverMapRouteAppUrl(place, directLocation)
+    : (hasSavedNaverUrl ? webUrl : naverMapAppUrl(place));
   const [routeState, setRouteState] = useState('idle');
 
   useEffect(() => () => cancelFallbackRef.current(), []);
@@ -28,7 +31,10 @@ export default function NaverMapButton({ place, children = 'Naver Map', variant 
   function openNaverMap(event) {
     const platform = mobilePlatform();
     if (!route) {
-      if (platform === 'desktop') return;
+      // A saved Naver URL identifies the exact place. Let the browser/Naver
+      // universal link open it instead of replacing it with a generated name
+      // search that may resolve to a different branch.
+      if (platform === 'desktop' || hasSavedNaverUrl) return;
       openSearchApp(event, platform);
       return;
     }
@@ -143,6 +149,11 @@ function placeCoordinates(place) {
   const longitude = Number(place?.longitude ?? place?.lng);
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
   return { latitude, longitude };
+}
+
+function savedNaverUrl(place) {
+  return [place?.naverMapUrl, place?.googleMapUrl, place?.mapUrl]
+    .some((value) => /(?:naver\.com|naver\.me)/i.test(String(value || '')));
 }
 
 async function resolveDestinationLocation(place) {

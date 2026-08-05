@@ -18,7 +18,7 @@ export function matchesWishlistQuery(item, query = '') {
     item?.nameZhSimplified,
     item?.lookupName,
     formatPlaceName(item),
-    item?.note,
+    item?.description,
     item?.recommendationSource,
     item?.area,
     item?.catchtableUrl,
