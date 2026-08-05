@@ -9,6 +9,13 @@
 - 若地點已有 Naver Map／Naver 短連結，Naver Map 按鈕會直接開啟該連結，不再改用自動產生的韓文名稱搜尋；沒有既有連結時才使用原本的搜尋備援。
 - Google 星等列新增「重新搜尋照片與星等」按鈕，按下後才會略過現有快取重新取得資料；原本的自動載入與評價視窗重新整理仍保留。
 
+## 2026-08-05（Google Maps 連結優先）
+
+- Google Places 查詢現在優先使用地點的 Google Maps 連結；可解析連結中的 Place ID，或使用連結本身的地點名稱查詢，只有無法解析時才回到原本的名稱搜尋。
+- Google Maps 連結會使用獨立快取鍵，不會讀取舊韓文名稱的星等／照片快取；修改連結時也會清除舊 Place ID，避免新連結被舊資料蓋回。
+- 背景商家更新會保留使用者輸入的 Google Maps 連結；地圖定位與嵌入地圖也優先使用連結中的 Place ID。
+- Supabase `google-place-details` Edge Function 已部署，實測含 Place ID 的連結回傳 `google_link`，確認未先走韓文名稱搜尋。
+
 ### 驗證
 
 - `npm test` 與 `npm run build` 均需通過；另以瀏覽器確認願望清單、行程、地圖三處欄位與連結顯示。

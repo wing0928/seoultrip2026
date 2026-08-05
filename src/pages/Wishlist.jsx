@@ -75,7 +75,9 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
 
   const advancedFilterCount = Number(typeFilter !== '全部') + Number(areaFilter !== '全部');
   function updateField(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => field === 'googleMapUrl' && current.googleMapUrl !== value
+      ? { ...current, googleMapUrl: value, googlePlaceId: '' }
+      : { ...current, [field]: value });
   }
 
   function toggleClothingTag(tag) {

@@ -179,7 +179,9 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
   }
 
   function updateField(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => field === 'googleMapUrl' && current.googleMapUrl !== value
+      ? { ...current, googleMapUrl: value, googlePlaceId: '' }
+      : { ...current, [field]: value });
   }
 
   function toggleClothingTag(tag) {

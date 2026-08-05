@@ -163,19 +163,41 @@ function toNaverWebCoordinates({ latitude, longitude }) {
 
 export function googleMapUrl(place) {
   const name = placeNameQuery(place);
+  if (/(?:google\.[^/]+\/maps|maps\.google\.[^/]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(place?.googleMapUrl || '')) {
+    return cleanGoogleMapUrl(place.googleMapUrl, place);
+  }
   if (place?.googlePlaceId) {
     return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(name || '首爾')}&query_place_id=${encodeURIComponent(place.googlePlaceId)}`;
-  }
-  if (/(?:google\.[^/]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(place?.googleMapUrl || '')) {
-    return cleanGoogleMapUrl(place.googleMapUrl, place);
   }
   return `${GOOGLE_MAP_SEARCH}${encodeURIComponent(name || '首爾')}`;
 }
 
+export function googlePlaceIdFromMapUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  let parsed = null;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    // Continue with raw URL patterns for partially formed pasted links.
+  }
+
+  const candidates = [
+    parsed?.searchParams.get('query_place_id'),
+    parsed?.searchParams.get('place_id')
+  ];
+  const embedded = raw.match(/(?:!1s|(?:query_place_id|place_id)[=:])([A-Za-z0-9_-]{5,400})/i);
+  if (embedded) candidates.push(embedded[1]);
+
+  return candidates.find((candidate) => /^[A-Za-z0-9_-]{5,400}$/.test(String(candidate || '').trim())) || '';
+}
+
 export function googleMapEmbedUrl(place, apiKey = '') {
   const name = placeNameQuery(place) || '首爾';
+  const placeId = googlePlaceIdFromMapUrl(place?.googleMapUrl) || place?.googlePlaceId || '';
   if (apiKey) {
-    const query = place?.googlePlaceId ? `place_id:${place.googlePlaceId}` : name;
+    const query = placeId ? `place_id:${placeId}` : name;
     return `https://www.google.com/maps/embed/v1/place?key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&language=zh-TW&region=KR`;
   }
   return `https://maps.google.com/maps?q=${encodeURIComponent(name)}&z=15&output=embed&hl=zh-TW`;

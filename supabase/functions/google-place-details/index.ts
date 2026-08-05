@@ -183,8 +183,63 @@ async function resolveIdentity(
 ) {
   const nameZh = cleanQuery(body?.nameZh);
   const providedNameKo = cleanQuery(body?.nameKo);
-  const originalName = nameZh || providedNameKo;
-  if (!originalName) return json({ code: 'invalid_name', error: '缺少可查詢的店名' }, 400, cors);
+  const googleMapUrl = cleanQuery(body?.googleMapUrl);
+  const linkedPlaceId = extractGooglePlaceId(googleMapUrl);
+  const originalName = nameZh || providedNameKo || linkedPlaceId;
+  if (!originalName) return json({ code: 'invalid_name', error: '缺少可查詢的店名或 Google Maps 連結' }, 400, cors);
+
+  if (linkedPlaceId) {
+    try {
+      const linkedPlace = await fetchPlaceDetails(linkedPlaceId, 'zh-TW', apiKey);
+      if (!linkedPlace) throw new GoogleApiError('not_found', 'Google Maps 連結找不到商家', 404);
+      const koreanDetails = await fetchPlaceDetails(linkedPlaceId, 'ko', apiKey).catch(() => null);
+      const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, providedNameKo);
+      return json({
+        resolution: {
+          status: 'google_link',
+          message: '已優先使用使用者提供的 Google Maps 連結取得商家資料',
+          inputName: originalName,
+          searchName: nameKo || linkedPlace.displayName?.text || originalName,
+          nameKo,
+          nameZhSimplified: nameZh ? safeSimplified(nameZh) : '',
+          googlePlaceId: linkedPlace.id || linkedPlaceId,
+          googleMapsUri: linkedPlace.googleMapsUri || googleMapUrl,
+          type: inferBusinessType(linkedPlace, body?.type, body?.note),
+          reviewEligible: isReviewEligible(linkedPlace),
+          place: presentPlace(linkedPlace, request)
+        }
+      }, 200, cors);
+    } catch (error) {
+      if (!(error instanceof GoogleApiError) || error.code !== 'not_found') throw error;
+      // If the pasted link cannot be resolved, retain the existing name-based
+      // fallback instead of blocking the rest of the place lookup.
+    }
+  }
+
+  const linkedQuery = extractGoogleMapQuery(googleMapUrl);
+  if (linkedQuery) {
+    const linkedCandidate = (await searchPlaces(linkedQuery, 'zh-TW', apiKey, 1, body?.area))[0] || null;
+    if (linkedCandidate) {
+      const linkedPlace = await fetchPlaceDetails(linkedCandidate.id, 'zh-TW', apiKey);
+      const koreanDetails = await fetchPlaceDetails(linkedCandidate.id, 'ko', apiKey).catch(() => null);
+      const nameKo = cleanKoreanDisplayName(koreanDetails?.displayName?.text, providedNameKo);
+      return json({
+        resolution: {
+          status: 'google_link_query',
+          message: '已優先使用 Google Maps 連結中的地點名稱取得商家資料',
+          inputName: originalName,
+          searchName: nameKo || linkedPlace?.displayName?.text || linkedQuery,
+          nameKo,
+          nameZhSimplified: nameZh ? safeSimplified(nameZh) : '',
+          googlePlaceId: linkedPlace?.id || linkedCandidate.id,
+          googleMapsUri: linkedPlace?.googleMapsUri || linkedCandidate.googleMapsUri || googleMapUrl,
+          type: inferBusinessType(linkedPlace || linkedCandidate, body?.type, body?.note),
+          reviewEligible: isReviewEligible(linkedPlace || linkedCandidate),
+          place: presentPlace(linkedPlace || linkedCandidate, request)
+        }
+      }, 200, cors);
+    }
+  }
 
   const simplifiedName = nameZh ? safeSimplified(nameZh) : '';
   let koreanSearchName = providedNameKo;
@@ -435,6 +490,44 @@ function cleanQuery(value: unknown) {
 function cleanPlaceId(value: unknown) {
   const placeId = String(value || '').trim();
   return /^[A-Za-z0-9_-]{5,400}$/.test(placeId) ? placeId : '';
+}
+
+function extractGooglePlaceId(value: unknown) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  let parsed: URL | null = null;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    // Continue with embedded URL patterns for partially copied links.
+  }
+
+  const candidates = [
+    parsed?.searchParams.get('query_place_id'),
+    parsed?.searchParams.get('place_id')
+  ];
+  const embedded = raw.match(/(?:!1s|(?:query_place_id|place_id)[=:])([A-Za-z0-9_-]{5,400})/i);
+  if (embedded) candidates.push(embedded[1]);
+  return candidates.map(cleanPlaceId).find(Boolean) || '';
+}
+
+function extractGoogleMapQuery(value: unknown) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+
+  try {
+    const parsed = new URL(raw);
+    const query = parsed.searchParams.get('query') || parsed.searchParams.get('q');
+    if (query) return cleanQuery(query.replace(/\+/g, ' '));
+
+    const match = parsed.pathname.match(/\/maps\/(?:place|search)\/([^/@?]+)/i);
+    if (match) return cleanQuery(decodeURIComponent(match[1]).replace(/\+/g, ' '));
+  } catch {
+    // Ignore malformed links and let the normal name lookup handle them.
+  }
+
+  return '';
 }
 
 class GoogleApiError extends Error {

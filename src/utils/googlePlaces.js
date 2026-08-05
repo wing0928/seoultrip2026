@@ -1,4 +1,4 @@
-import { placeNameQuery, searchMapUrl } from './maps.js';
+import { googlePlaceIdFromMapUrl, placeNameQuery, searchMapUrl } from './maps.js';
 import { normalizePlaceType } from './placePresentation.js';
 
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL || '').trim().replace(/\/$/, '');
@@ -15,7 +15,8 @@ export const googlePlacesConfigured = Boolean(FUNCTION_URL);
 export const BUSINESS_LOOKUP_VERSION = 7;
 
 export function supportsGoogleDetails(place) {
-  return place?.googleDetailsEligible === true ||
+  return Boolean(String(place?.googleMapUrl || '').trim()) ||
+    place?.googleDetailsEligible === true ||
     place?.type === '商店' ||
     ['餐廳', '小吃', '咖啡廳', '服裝', '選物店', '購物中心'].includes(normalizePlaceType(place?.type));
 }
@@ -25,18 +26,21 @@ export async function getGooglePlaceDetails(place, { refresh = false } = {}) {
     throw new GooglePlacesError('not_configured', 'Google Places 尚未連線');
   }
 
+  const linkedPlaceId = googlePlaceIdFromMapUrl(place.googleMapUrl);
+  const placeId = linkedPlaceId || place.googlePlaceId || '';
   const query = placeNameQuery(place);
-  const cacheId = place.googlePlaceId || query;
+  const directUrl = String(place.googleMapUrl || '').trim();
+  const cacheId = placeId ? `place:${placeId}` : (directUrl ? `url:${directUrl}` : query);
   const cached = readCache()[cacheId];
   if (!refresh && cached && Date.now() - cached.savedAt < CACHE_TTL && hasCurrentGooglePhotoUrls(cached.data)) {
     return cached.data;
   }
 
-  const data = place.googlePlaceId
+  const data = placeId
     ? (await callGooglePlaces({
         action: 'details',
         query,
-        placeId: place.googlePlaceId,
+        placeId,
         type: place.type || '',
         note: place.note || '',
         area: place.area || ''
@@ -64,7 +68,7 @@ export async function getGoogleMapLocations(places, { refresh = false } = {}) {
     } else {
       missing.push({
         id: place.id,
-        placeId: place.googlePlaceId || '',
+        placeId: googlePlaceIdFromMapUrl(place.googleMapUrl) || place.googlePlaceId || '',
         query: placeNameQuery(place),
         area: place.area || '',
         cacheId
@@ -113,6 +117,7 @@ async function resolvePlaceIdentity(place) {
     action: 'resolve',
     nameZh: nameZh || nameKo,
     nameKo,
+    googleMapUrl: place?.googleMapUrl || '',
     type: place?.type || '',
     note: place?.note || '',
     area: place?.area || ''
@@ -132,7 +137,7 @@ export async function enrichPlaceIdentity(place) {
     nameZhSimplified: resolution.nameZhSimplified || '',
     lookupName,
     googlePlaceId: acceptedPlace ? resolution.googlePlaceId : (place.googlePlaceId || ''),
-    googleMapUrl: acceptedPlace ? (resolution.googleMapsUri || '') : (place.googleMapUrl || ''),
+    googleMapUrl: preservedGoogleUrl(place) || (acceptedPlace ? (resolution.googleMapsUri || '') : (place.googleMapUrl || '')),
     naverMapUrl: preservedNaverUrl(place) || searchMapUrl(lookupName),
     // A type selected in the editor is the user's source of truth. Google may
     // still refresh names, maps and reviews, but it must not overwrite that
@@ -187,6 +192,11 @@ function preservedNaverUrl(place) {
   return /naver\.me/i.test(url) || !/\/p\/search\//i.test(url) ? url : '';
 }
 
+function preservedGoogleUrl(place) {
+  const url = String(place?.googleMapUrl || '').trim();
+  return /(?:google\.[^/]+\/maps|maps\.google\.[^/]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url) ? url : '';
+}
+
 function readCache() {
   return readStorageCache(CACHE_KEY);
 }
@@ -218,7 +228,7 @@ function writeStorageCache(key, cache) {
 }
 
 function mapLocationCacheId(place) {
-  return `${place?.googlePlaceId || placeNameQuery(place)}|${place?.area || ''}`;
+  return `${googlePlaceIdFromMapUrl(place?.googleMapUrl) || place?.googlePlaceId || placeNameQuery(place)}|${place?.area || ''}`;
 }
 
 export function hasCurrentGooglePhotoUrls(data) {

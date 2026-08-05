@@ -6,7 +6,7 @@ export default function useGooglePlaceDetails(items = []) {
   const [googleStatus, setGoogleStatus] = useState({});
   const eligibleItemsKey = useMemo(() => items
     .filter(supportsGoogleDetails)
-    .map((item) => `${item.id}:${item.googlePlaceId || item.lookupName || item.nameKo || item.nameZh || item.name}`)
+    .map((item) => `${item.id}:${item.googleMapUrl || item.googlePlaceId || item.lookupName || item.nameKo || item.nameZh || item.name}`)
     .join('|'), [items]);
 
   const loadGoogleDetails = useCallback(async (item, refresh = false) => {
@@ -25,6 +25,11 @@ export default function useGooglePlaceDetails(items = []) {
     if (!googlePlacesConfigured || !eligibleItemsKey) return undefined;
     let cancelled = false;
     const eligibleItems = items.filter(supportsGoogleDetails);
+    setGoogleDetails((current) => {
+      const next = { ...current };
+      eligibleItems.forEach((item) => { delete next[item.id]; });
+      return next;
+    });
 
     async function hydrateRatings() {
       for (const item of eligibleItems) {

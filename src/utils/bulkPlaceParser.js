@@ -131,7 +131,7 @@ function isNaverUrl(url) {
 }
 
 function isGoogleMapsUrl(url) {
-  return /(?:google\.[^/]+\/maps|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
+  return /(?:google\.[^/]+\/maps|maps\.google\.[^/]+|maps\.app\.goo\.gl|goo\.gl\/maps)/i.test(url);
 }
 
 function isCatchtableUrl(url) {

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { itineraryDays, toPersistedItinerary } from '../src/data/itinerary.js';
 import { backupSummary, parseBackup, serializeBackup } from '../src/utils/backup.js';
-import { catchtableUrlForPlace, googleMapUrl, naverMapRouteAppUrl, naverMapRouteUrl, placeMapUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
+import { catchtableUrlForPlace, googleMapUrl, googlePlaceIdFromMapUrl, naverMapRouteAppUrl, naverMapRouteUrl, placeMapUrl, resolveCatchtableUrlForPlace, routeMapUrl } from '../src/utils/maps.js';
 import { distanceInMeters, formatDistance } from '../src/utils/geo.js';
 import { migrateWishlist } from '../src/utils/storage.js';
 import { mergeIdentityRefreshResult } from '../src/utils/businessIdentity.js';
@@ -108,6 +108,22 @@ test('saved Naver and Google links remain the exact place links', () => {
 
   const google = { nameKo: '성수 카페', googleMapUrl: 'https://www.google.com/maps/place/example' };
   assert.equal(googleMapUrl(google), google.googleMapUrl);
+});
+
+test('Google Maps links provide the highest-priority Place ID when available', () => {
+  assert.equal(
+    googlePlaceIdFromMapUrl('https://www.google.com/maps/search/?api=1&query=Cafe&query_place_id=ChIJExamplePlace123'),
+    'ChIJExamplePlace123'
+  );
+  assert.equal(
+    googlePlaceIdFromMapUrl('https://www.google.com/maps/place/Cafe/data=!4m2!3m1!1sChIJEmbeddedPlace123'),
+    'ChIJEmbeddedPlace123'
+  );
+  assert.equal(googlePlaceIdFromMapUrl('https://maps.app.goo.gl/example'), '');
+  assert.equal(
+    googleMapUrl({ nameKo: '新店名', googlePlaceId: 'old-place-id', googleMapUrl: 'https://maps.google.com/?cid=123' }),
+    'https://maps.google.com/?cid=123'
+  );
 });
 
 test('CATCHTABLE links use saved direct URLs or verified food and cafe shop pages', () => {
