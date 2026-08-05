@@ -20,12 +20,25 @@ export function PlacePhotoStrip({ details, status, onOpen }) {
   );
 }
 
-export function GoogleRatingStrip({ details, status }) {
+export function GoogleRatingStrip({ details, status, onRefresh = null }) {
   return (
     <div className="google-rating-strip" aria-label="Google 星等">
       <Star size={18} fill={details?.rating ? 'currentColor' : 'none'} />
       <strong>{details?.rating ? details.rating.toFixed(1) : '—'}</strong>
       <span>{details?.userRatingCount ? `${details.userRatingCount.toLocaleString()} 則 Google 評價` : (status === 'loading' ? '載入 Google 評價中' : 'Google 星等尚未取得')}</span>
+      {onRefresh && googlePlacesConfigured && (
+        <button
+          type="button"
+          className="mini-button google-refresh-button"
+          onClick={onRefresh}
+          disabled={status === 'loading'}
+          aria-label="重新搜尋 Google 照片與星等"
+          title="重新搜尋 Google 照片與星等"
+        >
+          <RefreshCw className={status === 'loading' ? 'spin' : ''} size={15} />
+          {status === 'loading' ? '搜尋中…' : '重新搜尋照片與星等'}
+        </button>
+      )}
     </div>
   );
 }
@@ -61,7 +74,7 @@ function GoogleReviewContent({ details, fallbackMapUrl, onRefresh }) {
         <Star size={25} fill="currentColor" />
         <strong>{details.rating ? details.rating.toFixed(1) : '—'}</strong>
         <span>{details.userRatingCount ? `${details.userRatingCount.toLocaleString()} 則評價` : '尚無評論數'}</span>
-        <button className="icon-button" onClick={onRefresh} aria-label="重新整理 Google 評價" title="重新整理 Google 評價"><RefreshCw size={17} /></button>
+        <button className="icon-button" onClick={onRefresh} aria-label="重新搜尋 Google 照片與星等" title="重新搜尋 Google 照片與星等"><RefreshCw size={17} /></button>
       </div>
       {details.address && <p className="google-place-address">{details.address}</p>}
 

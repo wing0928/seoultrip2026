@@ -17,6 +17,7 @@ export default function PlaceCard({
   googleStatus = '',
   showGoogleDetails = false,
   onOpenGoogle = null,
+  onRefreshGoogle = null,
   onAreaSelect = null,
   collapseSummary = false,
   showNote = true
@@ -77,7 +78,7 @@ export default function PlaceCard({
         ) : (
           [note, description].filter(Boolean).flatMap((text) => text.split('\n')).map((line, index) => <p key={`${line}-${index}`}>{line}</p>)
         )}
-        {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} />}
+        {supportsDetails && <GoogleRatingStrip details={googleDetails} status={googleStatus} onRefresh={onRefreshGoogle} />}
         <div className="button-row place-link-row">
           {hasRoute ? (
             <NaverMapButton place={place} route variant="primary"><Navigation size={17} /> 開始導航</NaverMapButton>

@@ -1694,6 +1694,7 @@ textarea {
 
 .google-rating-strip {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 7px;
   min-height: 42px;
@@ -1713,6 +1714,18 @@ textarea {
   min-width: 0;
   color: var(--muted);
   font-size: 0.82rem;
+}
+
+.google-refresh-button {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+}
+
+.google-refresh-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .google-rating-strip + .button-row {

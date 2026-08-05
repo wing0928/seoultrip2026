@@ -370,6 +370,7 @@ export default function Wishlist({ wishlist, setWishlist, businessRefreshStatus 
               showGoogleDetails
               showNote={false}
               onOpenGoogle={() => openGoogleDialog(item)}
+              onRefreshGoogle={() => loadGoogleDetails(item, true)}
               onAreaSelect={(district) => setAreaFilter(district.name)}
               actions={<><button onClick={() => setWishlist((items) => items.map((old) => old.id === item.id ? { ...old, visited: !old.visited } : old))}><CheckCircle2 size={17} /> {item.visited ? '取消已去' : '標記已去'}</button><button onClick={() => edit(item)}><Pencil size={17} /> 編輯</button><button className="danger" onClick={() => deleteWishlistItem(item)}><Trash2 size={17} /> 刪除</button></>}
             />

@@ -641,6 +641,7 @@ export default function Itinerary({ trip, itinerary, setItinerary, wishlist = []
                         googleStatus={googleStatus[stop.id]}
                         showGoogleDetails={showsGoogleDetails(stop)}
                         onOpenGoogle={() => openGoogleDialog(stop)}
+                        onRefreshGoogle={() => loadGoogleDetails(stop, true)}
                         collapseSummary
                         actions={<><button onClick={() => startEdit(selectedDay.id, stop)}>{isEditingThisStop ? <X size={17} /> : <Pencil size={17} />}{isEditingThisStop ? '關閉' : '編輯'}</button><button className="danger" onClick={() => deleteStop(selectedDay.id, stop.id)}><Trash2 size={17} /> 刪除</button></>}
                       />
